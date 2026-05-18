@@ -7,17 +7,38 @@ export function useArchive() {
   const [archivedTasks, setArchivedTasks] = useState([]);
   const [loading, setLoading]             = useState(true);
 
+  const attachSubtasks = async (taskRows) => {
+    if (!taskRows?.length) return [];
+
+    const taskIds = taskRows.map((task) => task.id);
+    const { data: subtasks, error } = await supabase
+      .from("subtasks")
+      .select("*")
+      .in("task_id", taskIds);
+
+    if (error) {
+      console.error("Could not fetch archived subtasks:", error);
+      return taskRows.map((task) => ({ ...task, subtasks: [] }));
+    }
+
+    return taskRows.map((task) => ({
+      ...task,
+      subtasks: subtasks?.filter((subtask) => subtask.task_id === task.id) || [],
+    }));
+  };
+
   const fetchArchived = async () => {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("tasks")
-      .select("*, subtasks(*)")
+      .select("*")
       .eq("user_id", user.id)
       .eq("is_archived", true)
       .order("updated_at", { ascending: false });
 
-    if (!error) setArchivedTasks(data || []);
+    if (error) console.error("Could not fetch archived tasks:", error);
+    else setArchivedTasks(await attachSubtasks(data || []));
     setLoading(false);
   };
 

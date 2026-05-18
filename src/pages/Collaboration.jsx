@@ -1,0 +1,279 @@
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useCollaboration } from "../hooks/useCollaboration";
+import { useTasks } from "../hooks/useTasks";
+import CommentSection from "../components/collaboration/CommentSection";
+import CollaboratorList from "../components/collaboration/CollaboratorList";
+import InviteModal from "../components/collaboration/InviteModal";
+import JoinModal from "../components/collaboration/JoinModal";
+
+export default function Collaboration() {
+  const { user }  = useAuth();
+  const { tasks } = useTasks();
+  const {
+    sharedTasks, collaborators, loading,
+    fetchCollaborators, generateInviteCode,
+    joinByCode, updateRole, removeCollaborator,
+  } = useCollaboration();
+
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showInvite, setShowInvite]     = useState(false);
+  const [showJoin, setShowJoin]         = useState(false);
+  const [activeTab, setActiveTab]       = useState("mine");
+
+  const handleSelectTask = async (task) => {
+    setSelectedTask(task);
+    await fetchCollaborators(task.id);
+  };
+
+  const myTasks    = tasks.slice(0, 20);
+  const sharedList = sharedTasks.map((s) => s.task).filter(Boolean);
+  const displayTasks = activeTab === "mine" ? myTasks : sharedList;
+
+  const tabStyle = (active) => ({
+    flex: 1, padding: "0.5rem",
+    borderRadius: "8px", border: "none",
+    backgroundColor: active ? "rgba(91,140,255,0.15)" : "transparent",
+    color: active ? "#5B8CFF" : "#64748B",
+    fontFamily: "var(--font-body)", fontSize: "0.875rem",
+    fontWeight: active ? 600 : 400,
+    cursor: "pointer", transition: "all 0.2s",
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+      {/* ── Header ── */}
+      <div style={{
+        display: "flex", alignItems: "center",
+        justifyContent: "space-between", flexWrap: "wrap", gap: "1rem",
+      }}>
+        <div>
+          <h2 style={{
+            fontFamily: "var(--font-heading)", fontSize: "1.5rem",
+            fontWeight: 700, color: "#F1F5F9", marginBottom: "0.25rem",
+          }}>
+            Collaboration
+          </h2>
+          <p style={{ color: "#64748B", fontFamily: "var(--font-body)", fontSize: "0.875rem" }}>
+            Work together on tasks in real time
+          </p>
+        </div>
+
+        {/* Global join button — always visible */}
+        <button
+          onClick={() => setShowJoin(true)}
+          style={{
+            padding: "0.625rem 1.25rem",
+            borderRadius: "10px", border: "none",
+            background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+            color: "white", fontFamily: "var(--font-body)",
+            fontWeight: 600, fontSize: "0.9rem",
+            cursor: "pointer", transition: "all 0.2s",
+            display: "flex", alignItems: "center", gap: "0.4rem",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = "0.9"}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+        >
+          🔗 Join with Code
+        </button>
+      </div>
+
+      {/* ── Main layout ── */}
+      <div style={{ display: "flex", gap: "1.5rem", minHeight: "500px" }}>
+
+        {/* Left panel — task list */}
+        <div style={{
+          width: "280px", flexShrink: 0,
+          display: "flex", flexDirection: "column", gap: "1rem",
+        }}>
+          {/* Tabs */}
+          <div style={{
+            display: "flex", gap: "4px", padding: "4px",
+            backgroundColor: "rgba(255,255,255,0.03)",
+            borderRadius: "10px",
+          }}>
+            <button style={tabStyle(activeTab === "mine")}   onClick={() => setActiveTab("mine")}>
+              My Tasks
+            </button>
+            <button style={tabStyle(activeTab === "shared")} onClick={() => setActiveTab("shared")}>
+              Shared ({sharedList.length})
+            </button>
+          </div>
+
+          {/* Task list */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", overflowY: "auto" }}>
+            {displayTasks.length === 0 ? (
+              <div className="glass-card" style={{ padding: "1.5rem", textAlign: "center" }}>
+                <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+                  {activeTab === "mine"
+                    ? "No tasks yet — create one in My Tasks"
+                    : "No shared tasks yet — join one with a code!"}
+                </p>
+              </div>
+            ) : (
+              displayTasks.map((task) => {
+                if (!task) return null;
+                const isSelected = selectedTask?.id === task.id;
+                return (
+                  <button
+                    key={task.id}
+                    onClick={() => handleSelectTask(task)}
+                    style={{
+                      width: "100%", textAlign: "left",
+                      padding: "0.875rem 1rem", borderRadius: "10px",
+                      border: `1px solid ${isSelected ? "rgba(91,140,255,0.3)" : "rgba(255,255,255,0.06)"}`,
+                      backgroundColor: isSelected
+                        ? "rgba(91,140,255,0.1)"
+                        : "rgba(17,24,39,0.5)",
+                      cursor: "pointer", transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.backgroundColor = "rgba(17,24,39,0.5)";
+                    }}
+                  >
+                    <p style={{
+                      fontFamily: "var(--font-body)", fontSize: "0.875rem",
+                      fontWeight: 500,
+                      color: isSelected ? "#5B8CFF" : "#CBD5E1",
+                      marginBottom: "0.2rem",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {task.title}
+                    </p>
+                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "#475569" }}>
+                      {task.priority} priority
+                    </p>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Right panel — collaboration detail */}
+        <div style={{ flex: 1 }}>
+          {!selectedTask ? (
+            <div className="glass-card" style={{
+              height: "100%", minHeight: "400px",
+              display: "flex", alignItems: "center",
+              justifyContent: "center", flexDirection: "column", gap: "1rem",
+            }}>
+              <div style={{ fontSize: "3rem" }}>👥</div>
+              <h3 style={{ fontFamily: "var(--font-heading)", color: "#F1F5F9" }}>
+                Select a task to collaborate
+              </h3>
+              <p style={{
+                fontFamily: "var(--font-body)", color: "#475569",
+                fontSize: "0.9rem", textAlign: "center", maxWidth: "300px",
+              }}>
+                Pick a task from the left to manage collaborators and comments,
+                or click <strong style={{ color: "#5B8CFF" }}>Join with Code</strong> to join a teammate's task.
+              </p>
+              <button
+                onClick={() => setShowJoin(true)}
+                style={{
+                  padding: "0.5rem 1.25rem", borderRadius: "10px",
+                  border: "1px solid rgba(91,140,255,0.3)",
+                  backgroundColor: "rgba(91,140,255,0.1)",
+                  color: "#5B8CFF", fontFamily: "var(--font-body)",
+                  fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
+                }}
+              >
+                🔗 Join with Code
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+
+              {/* Task header */}
+              <div className="glass-card" style={{ padding: "1.25rem" }}>
+                <div style={{
+                  display: "flex", alignItems: "center",
+                  justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem",
+                }}>
+                  <div>
+                    <h3 style={{
+                      fontFamily: "var(--font-heading)", fontSize: "1.1rem",
+                      fontWeight: 700, color: "#F1F5F9", marginBottom: "0.2rem",
+                    }}>
+                      {selectedTask.title}
+                    </h3>
+                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "#64748B" }}>
+                      Invite code:{" "}
+                      <span style={{
+                        fontFamily: "var(--font-mono)", color: "#5B8CFF",
+                        fontWeight: 700, letterSpacing: "0.1em",
+                      }}>
+                        {generateInviteCode(selectedTask.id)}
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowInvite(true)}
+                    style={{
+                      padding: "0.5rem 1rem", borderRadius: "10px", border: "none",
+                      background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+                      color: "white", fontFamily: "var(--font-body)",
+                      fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
+                    }}
+                  >
+                    Share Invite Code
+                  </button>
+                </div>
+              </div>
+
+              {/* Collaborators */}
+              <div className="glass-card" style={{ padding: "1.25rem" }}>
+                <h4 style={{
+                  fontFamily: "var(--font-heading)", fontSize: "0.95rem",
+                  fontWeight: 600, color: "#94A3B8", marginBottom: "1rem",
+                }}>
+                  👥 Collaborators {collaborators.length > 0 && `(${collaborators.length})`}
+                </h4>
+                {collaborators.length === 0 ? (
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "#334155" }}>
+                    No collaborators yet — share the invite code!
+                  </p>
+                ) : (
+                  <CollaboratorList
+                    collaborators={collaborators}
+                    currentUserId={user.id}
+                    onUpdateRole={updateRole}
+                    onRemove={removeCollaborator}
+                  />
+                )}
+              </div>
+
+              {/* Comments */}
+              <div className="glass-card" style={{ padding: "1.25rem" }}>
+                <CommentSection taskId={selectedTask.id} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Share invite modal */}
+      {showInvite && selectedTask && (
+        <InviteModal
+          task={selectedTask}
+          inviteCode={generateInviteCode(selectedTask.id)}
+          onJoinByCode={joinByCode}
+          onClose={() => setShowInvite(false)}
+        />
+      )}
+
+      {/* Standalone join modal */}
+      {showJoin && (
+        <JoinModal
+          onJoinByCode={joinByCode}
+          onClose={() => setShowJoin(false)}
+        />
+      )}
+    </div>
+  );
+}

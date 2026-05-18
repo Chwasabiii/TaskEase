@@ -4,6 +4,7 @@ import AppShell from "./components/layout/AppShell";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Archive from "./pages/Archive";
+import Collaboration from "./pages/Collaboration";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -25,10 +26,11 @@ function AppContent() {
 
   const renderPage = () => {
     switch (activePage) {
-      case "dashboard": return <Dashboard />;
-      case "tasks":     return <Tasks />;
-      case "archive":   return <Archive />;
-      default:          return <Dashboard />;
+      case "dashboard":     return <Dashboard />;
+      case "tasks":         return <Tasks />;
+      case "archive":       return <Archive />;
+      case "collaboration": return <Collaboration />;
+      default:              return <Dashboard />;
     }
   };
 

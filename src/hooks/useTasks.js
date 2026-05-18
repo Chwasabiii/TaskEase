@@ -8,19 +8,44 @@ export function useTasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
+  const attachSubtasks = async (taskRows) => {
+    if (!taskRows?.length) return [];
+
+    const taskIds = taskRows.map((task) => task.id);
+    const { data: subtasks, error: subtasksError } = await supabase
+      .from("subtasks")
+      .select("*")
+      .in("task_id", taskIds);
+
+    if (subtasksError) {
+      console.error("Could not fetch subtasks:", subtasksError);
+      return taskRows.map((task) => ({ ...task, subtasks: [] }));
+    }
+
+    return taskRows.map((task) => ({
+      ...task,
+      subtasks: subtasks?.filter((subtask) => subtask.task_id === task.id) || [],
+    }));
+  };
+
   // Fetch all tasks
   const fetchTasks = async () => {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("tasks")
-      .select("*, subtasks(*)")
+      .select("*")
       .eq("user_id", user.id)
       .eq("is_archived", false)
       .order("created_at", { ascending: false });
 
-    if (error) setError(error.message);
-    else setTasks(data || []);
+    if (error) {
+      console.error("Could not fetch tasks:", error);
+      setError(error.message);
+    } else {
+      setError(null);
+      setTasks(await attachSubtasks(data || []));
+    }
     setLoading(false);
   };
 
@@ -31,9 +56,9 @@ export function useTasks() {
     const { data, error } = await supabase
       .from("tasks")
       .insert([{ ...taskData, user_id: user.id }])
-      .select("*, subtasks(*)")
+      .select("*")
       .single();
-    if (!error) setTasks((prev) => [data, ...prev]);
+    if (!error) setTasks((prev) => [{ ...data, subtasks: [] }, ...prev]);
     return { data, error };
   };
 
@@ -43,9 +68,13 @@ export function useTasks() {
       .from("tasks")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select("*, subtasks(*)")
+      .select("*")
       .single();
-    if (!error) setTasks((prev) => prev.map((t) => (t.id === id ? data : t)));
+    if (!error) {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...data, subtasks: t.subtasks || [] } : t))
+      );
+    }
     return { data, error };
   };
 

@@ -3,26 +3,53 @@ import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext({});
 
+const isInvalidRefreshTokenError = (error) =>
+  error?.message?.toLowerCase().includes("invalid refresh token");
+
+const clearStoredSupabaseSession = () => {
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
+    .forEach((key) => localStorage.removeItem(key));
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    const initializeSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (!isMounted) return;
+
+      if (isInvalidRefreshTokenError(error)) {
+        clearStoredSupabaseSession();
+        await supabase.auth.signOut({ scope: "local" });
+        setUser(null);
+      } else {
+        setUser(session?.user ?? null);
+      }
+
       setLoading(false);
-    });
+    };
+
+    initializeSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setUser(session?.user ?? null);
         setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email, password, fullName) => {
@@ -43,7 +70,11 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (isInvalidRefreshTokenError(error)) {
+      clearStoredSupabaseSession();
+      await supabase.auth.signOut({ scope: "local" });
+    }
   };
 
   return (
