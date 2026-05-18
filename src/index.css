@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+  }
+
+  body {
+    background-color: #0F172A;
+    color: #F1F5F9;
+    font-family: "Inter", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  code, pre {
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0F172A;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1E293B;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5B8CFF;
+  }
+}
+
+@layer components {
+  /* Glassmorphism card */
+  .glass-card {
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  }
+
+  /* Glow button */
+  .btn-primary {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    font-family: inherit;
+    font-weight: 500;
+    padding: 0.625rem 1.25rem;
+    border-radius: 1rem;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 12px 24px rgba(91, 140, 255, 0.3);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.95);
+  }
+
+  .btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: #CBD5E1;
+    font-family: inherit;
+    font-weight: 500;
+    padding: 0.625rem 1.25rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+  }
+
+  .btn-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #FFFFFF;
+  }
+
+  .btn-ghost:active {
+    transform: scale(0.95);
+  }
+}
