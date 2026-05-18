@@ -6,7 +6,7 @@ import TaskModal from "../components/tasks/TaskModal";
 const FILTERS   = ["All", "Todo", "In Progress", "Done"];
 const PRIORITIES = ["All", "Urgent", "High", "Medium", "Low"];
 
-export default function Tasks() {
+export default function Tasks({ onNotify }) {
   const {
     tasks, loading,
     createTask, updateTask,
@@ -19,9 +19,24 @@ export default function Tasks() {
   const [priority, setPriority]       = useState("All");
   const [search, setSearch]           = useState("");
 
-  const handleSave = (formData) => {
-    if (editingTask) return updateTask(editingTask.id, formData);
-    return createTask(formData);
+  const handleSave = async (formData) => {
+    if (editingTask) {
+      const result = await updateTask(editingTask.id, formData);
+      onNotify?.({
+        title: "Task updated",
+        message: `${formData.title} was updated successfully.`,
+        type: "task",
+      });
+      return result;
+    }
+
+    const result = await createTask(formData);
+    onNotify?.({
+      title: "New task created",
+      message: `${formData.title} was added to your list.`,
+      type: "task",
+    });
+    return result;
   };
 
   const handleEdit = (task) => {
@@ -34,8 +49,35 @@ export default function Tasks() {
     setEditingTask(null);
   };
 
+  const handleToggle = async (id, currentStatus) => {
+    toggleComplete(id, currentStatus);
+    onNotify?.({
+      title: currentStatus === "done" ? "Task reopened" : "Task completed",
+      message: currentStatus === "done"
+        ? "A task was reopened."
+        : "A task was marked complete.",
+      type: "task",
+    });
+  };
+
+  const handleArchive = async (id) => {
+    archiveTask(id);
+    onNotify?.({
+      title: "Task archived",
+      message: "A task was moved to the archive.",
+      type: "task",
+    });
+  };
+
   const handleDelete = async (id) => {
-    if (window.confirm("Delete this task?")) deleteTask(id);
+    if (window.confirm("Delete this task?")) {
+      deleteTask(id);
+      onNotify?.({
+        title: "Task deleted",
+        message: "A task was deleted from your list.",
+        type: "task",
+      });
+    }
   };
 
   // Filter logic
@@ -144,10 +186,10 @@ export default function Tasks() {
       <TaskList
         tasks={filtered}
         loading={loading}
-        onToggle={toggleComplete}
+        onToggle={handleToggle}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onArchive={archiveTask}
+        onArchive={handleArchive}
       />
 
       {/* Modal */}

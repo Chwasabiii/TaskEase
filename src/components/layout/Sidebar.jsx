@@ -7,7 +7,6 @@ const navItems = [
   { icon: "⌂", label: "Archive",         id: "archive" },
   { icon: "⚡", label: "Focus Mode",     id: "focus" },
   { icon: "👥", label: "Collaboration",  id: "collaboration" },
-  { icon: "🔔", label: "Notifications",  id: "notifications" },
 ];
 
 export default function Sidebar({ activePage, setActivePage }) {
@@ -111,7 +110,7 @@ export default function Sidebar({ activePage, setActivePage }) {
               }}
             >
               <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>{item.icon}</span>
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && item.id !== "notifications" && <span>{item.label}</span>}
               {isActive && !collapsed && (
                 <span
                   style={{

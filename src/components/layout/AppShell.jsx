@@ -2,7 +2,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 
-export default function AppShell({ children, activePage, setActivePage, user, onSignOut }) {
+export default function AppShell({ children, activePage, setActivePage, user, onSignOut, notifications }) {
   const [collapsed, setCollapsed] = useState(false);
   const sidebarWidth = collapsed ? 72 : 240;
 
@@ -26,7 +26,7 @@ export default function AppShell({ children, activePage, setActivePage, user, on
           minHeight: "100vh",
         }}
       >
-        <Navbar activePage={activePage} user={user} onSignOut={onSignOut} />
+        <Navbar activePage={activePage} user={user} onSignOut={onSignOut} setActivePage={setActivePage} notifications={notifications} />
         <main
           style={{
             flex: 1,

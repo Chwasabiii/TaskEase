@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCollaboration } from "../hooks/useCollaboration";
 import { useTasks } from "../hooks/useTasks";
 import CommentSection from "../components/collaboration/CommentSection";
+import ChecklistSection from "../components/collaboration/ChecklistSection";
 import CollaboratorList from "../components/collaboration/CollaboratorList";
+import FileSection from "../components/collaboration/FileSection";
 import InviteModal from "../components/collaboration/InviteModal";
 import JoinModal from "../components/collaboration/JoinModal";
 
-export default function Collaboration() {
+export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
   const { user }  = useAuth();
   const { tasks } = useTasks();
   const {
-    sharedTasks, collaborators, loading,
+    sharedTasks, collaborators,
     fetchCollaborators, generateInviteCode,
     joinByCode, updateRole, removeCollaborator,
   } = useCollaboration();
@@ -20,6 +22,7 @@ export default function Collaboration() {
   const [showInvite, setShowInvite]     = useState(false);
   const [showJoin, setShowJoin]         = useState(false);
   const [activeTab, setActiveTab]       = useState("mine");
+  const detailRef = useRef(null);
 
   const handleSelectTask = async (task) => {
     setSelectedTask(task);
@@ -29,6 +32,19 @@ export default function Collaboration() {
   const myTasks    = tasks.slice(0, 20);
   const sharedList = sharedTasks.map((s) => s.task).filter(Boolean);
   const displayTasks = activeTab === "mine" ? myTasks : sharedList;
+
+  useEffect(() => {
+    if (!selectedTaskId) return;
+
+    const selected = [...sharedList, ...myTasks].find((task) => task?.id === selectedTaskId);
+    if (selected) {
+      const isShared = sharedList.some((task) => task?.id === selectedTaskId);
+      setActiveTab(isShared ? "shared" : "mine");
+      handleSelectTask(selected).then(() => {
+        detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [selectedTaskId, sharedList.length, myTasks.length]);
 
   const tabStyle = (active) => ({
     flex: 1, padding: "0.5rem",
@@ -155,7 +171,7 @@ export default function Collaboration() {
         </div>
 
         {/* Right panel — collaboration detail */}
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1 }} ref={detailRef}>
           {!selectedTask ? (
             <div className="glass-card" style={{
               height: "100%", minHeight: "400px",
@@ -251,6 +267,16 @@ export default function Collaboration() {
               {/* Comments */}
               <div className="glass-card" style={{ padding: "1.25rem" }}>
                 <CommentSection taskId={selectedTask.id} />
+              </div>
+
+              {/* Checklist */}
+              <div className="glass-card" style={{ padding: "1.25rem" }}>
+                <ChecklistSection taskId={selectedTask.id} />
+              </div>
+
+              {/* Files */}
+              <div className="glass-card" style={{ padding: "1.25rem" }}>
+                <FileSection taskId={selectedTask.id} />
               </div>
             </div>
           )}

@@ -1,4 +1,4 @@
-export default function Navbar({ activePage, user, onSignOut }) {
+export default function Navbar({ activePage, user, onSignOut, setActivePage, notifications }) {
   const pageLabels = {
     dashboard:     "Dashboard",
     tasks:         "My Tasks",
@@ -73,6 +73,7 @@ export default function Navbar({ activePage, user, onSignOut }) {
 
         {/* Notification bell */}
         <button
+          onClick={() => setActivePage("notifications")}
           style={{
             width: "38px",
             height: "38px",
@@ -91,18 +92,20 @@ export default function Navbar({ activePage, user, onSignOut }) {
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)"}
         >
           🔔
-          <span
-            style={{
-              position: "absolute",
-              top: "6px",
-              right: "6px",
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              backgroundColor: "#5B8CFF",
-              border: "2px solid #0F172A",
-            }}
-          />
+          {notifications?.length > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "6px",
+                right: "6px",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                backgroundColor: "#EF4444",
+                border: "2px solid #0F172A",
+              }}
+            />
+          )}
         </button>
 
         {/* Avatar */}
