@@ -26,7 +26,7 @@ export default function ProtectedRoute({ children }) {
               margin: "0 auto 1rem",
             }}
           />
-          <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
             Loading...
           </p>
         </div>
@@ -39,3 +39,4 @@ export default function ProtectedRoute({ children }) {
 
   return children;
 }
+

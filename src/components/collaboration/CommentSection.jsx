@@ -29,7 +29,7 @@ export default function CommentSection({ taskId }) {
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       <h4 style={{
         fontFamily: "var(--font-heading)", fontSize: "0.95rem",
-        fontWeight: 600, color: "#94A3B8",
+        fontWeight: 600, color: "var(--color-muted)",
       }}>
         💬 Comments {comments.length > 0 && `(${comments.length})`}
       </h4>
@@ -37,11 +37,11 @@ export default function CommentSection({ taskId }) {
       {/* Comment list */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "300px", overflowY: "auto" }}>
         {loading ? (
-          <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
             Loading comments...
           </p>
         ) : comments.length === 0 ? (
-          <p style={{ color: "#334155", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
             No comments yet. Start the conversation!
           </p>
         ) : (
@@ -75,14 +75,14 @@ export default function CommentSection({ taskId }) {
                   <div style={{
                     backgroundColor: isOwn
                       ? "rgba(91,140,255,0.15)"
-                      : "rgba(255,255,255,0.05)",
-                    border: `1px solid ${isOwn ? "rgba(91,140,255,0.2)" : "rgba(255,255,255,0.06)"}`,
+                      : "var(--color-hover)",
+                    border: `1px solid ${isOwn ? "rgba(91,140,255,0.2)" : "var(--color-border)"}`,
                     borderRadius: isOwn ? "12px 4px 12px 12px" : "4px 12px 12px 12px",
                     padding: "0.625rem 0.875rem",
                   }}>
                     <p style={{
                       fontFamily: "var(--font-body)", fontSize: "0.875rem",
-                      color: "#CBD5E1", lineHeight: 1.5,
+                      color: "var(--color-muted)", lineHeight: 1.5,
                     }}>
                       {comment.content}
                     </p>
@@ -92,7 +92,7 @@ export default function CommentSection({ taskId }) {
                     marginTop: "0.25rem",
                     justifyContent: isOwn ? "flex-end" : "flex-start",
                   }}>
-                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "#334155" }}>
+                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", color: "var(--color-muted)" }}>
                       {formatTime(comment.created_at)}
                     </span>
                     {isOwn && (
@@ -100,12 +100,12 @@ export default function CommentSection({ taskId }) {
                         onClick={() => deleteComment(comment.id)}
                         style={{
                           background: "none", border: "none",
-                          color: "#334155", cursor: "pointer",
+                          color: "var(--color-muted)", cursor: "pointer",
                           fontSize: "0.7rem", padding: 0,
                           transition: "color 0.2s",
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.color = "#EF4444"}
-                        onMouseLeave={(e) => e.currentTarget.style.color = "#334155"}
+                        onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-muted)"}
                       >
                         delete
                       </button>
@@ -130,16 +130,16 @@ export default function CommentSection({ taskId }) {
             flex: 1,
             padding: "0.6rem 0.875rem",
             borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.05)",
-            color: "#F1F5F9",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-hover)",
+            color: "var(--color-foreground)",
             fontFamily: "var(--font-body)",
             fontSize: "0.875rem",
             outline: "none",
             transition: "border 0.2s",
           }}
           onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-          onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+          onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
         />
         <button
           onClick={handleSend}
@@ -165,3 +165,4 @@ export default function CommentSection({ taskId }) {
     </div>
   );
 }
+

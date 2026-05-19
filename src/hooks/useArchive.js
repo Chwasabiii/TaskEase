@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
@@ -7,7 +7,7 @@ export function useArchive() {
   const [archivedTasks, setArchivedTasks] = useState([]);
   const [loading, setLoading]             = useState(true);
 
-  const attachSubtasks = async (taskRows) => {
+  const attachSubtasks = useCallback(async (taskRows) => {
     if (!taskRows?.length) return [];
 
     const taskIds = taskRows.map((task) => task.id);
@@ -25,9 +25,9 @@ export function useArchive() {
       ...task,
       subtasks: subtasks?.filter((subtask) => subtask.task_id === task.id) || [],
     }));
-  };
+  }, []);
 
-  const fetchArchived = async () => {
+  const fetchArchived = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
@@ -40,9 +40,14 @@ export function useArchive() {
     if (error) console.error("Could not fetch archived tasks:", error);
     else setArchivedTasks(await attachSubtasks(data || []));
     setLoading(false);
-  };
+  }, [attachSubtasks, user]);
 
-  useEffect(() => { fetchArchived(); }, [user]);
+  useEffect(() => {
+    const loadArchived = async () => {
+      await fetchArchived();
+    };
+    loadArchived();
+  }, [fetchArchived]);
 
   // Restore task back to active
   const restoreTask = async (id) => {

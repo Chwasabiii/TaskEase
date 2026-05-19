@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
@@ -8,7 +8,7 @@ export function useTasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
-  const attachSubtasks = async (taskRows) => {
+  const attachSubtasks = useCallback(async (taskRows) => {
     if (!taskRows?.length) return [];
 
     const taskIds = taskRows.map((task) => task.id);
@@ -26,10 +26,10 @@ export function useTasks() {
       ...task,
       subtasks: subtasks?.filter((subtask) => subtask.task_id === task.id) || [],
     }));
-  };
+  }, []);
 
   // Fetch all tasks
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
@@ -47,9 +47,14 @@ export function useTasks() {
       setTasks(await attachSubtasks(data || []));
     }
     setLoading(false);
-  };
+  }, [attachSubtasks, user]);
 
-  useEffect(() => { fetchTasks(); }, [user]);
+  useEffect(() => {
+    const loadTasks = async () => {
+      await fetchTasks();
+    };
+    loadTasks();
+  }, [fetchTasks]);
 
   // Create task
   const createTask = async (taskData) => {

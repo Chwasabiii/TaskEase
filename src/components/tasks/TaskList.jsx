@@ -1,7 +1,6 @@
 import TaskCard from "./TaskCard";
 
-export default function TaskList({ tasks, loading, onToggle, onEdit, onDelete, onArchive }) {
-  if (loading) {
+export default function TaskList({ tasks, loading, onToggle, onEdit, onDelete, onArchive, onView }) {  if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
         {[1, 2, 3].map((i) => (
@@ -11,7 +10,7 @@ export default function TaskList({ tasks, loading, onToggle, onEdit, onDelete, o
             style={{
               padding: "1.25rem",
               height: "80px",
-              background: "rgba(255,255,255,0.03)",
+              background: "var(--color-subtle)",
               animation: "pulse 1.5s ease-in-out infinite",
             }}
           />
@@ -28,10 +27,10 @@ export default function TaskList({ tasks, loading, onToggle, onEdit, onDelete, o
         style={{ padding: "3rem", textAlign: "center" }}
       >
         <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📋</div>
-        <h3 style={{ fontFamily: "var(--font-heading)", color: "#F1F5F9", marginBottom: "0.5rem" }}>
+        <h3 style={{ fontFamily: "var(--font-heading)", color: "var(--color-foreground)", marginBottom: "0.5rem" }}>
           No tasks yet
         </h3>
-        <p style={{ fontFamily: "var(--font-body)", color: "#475569", fontSize: "0.9rem" }}>
+        <p style={{ fontFamily: "var(--font-body)", color: "var(--color-muted)", fontSize: "0.9rem" }}>
           Click "New Task" to get started
         </p>
       </div>
@@ -42,14 +41,16 @@ export default function TaskList({ tasks, loading, onToggle, onEdit, onDelete, o
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       {tasks.map((task) => (
         <TaskCard
-          key={task.id}
-          task={task}
-          onToggle={onToggle}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onArchive={onArchive}
-        />
+  key={task.id}
+  task={task}
+  onToggle={onToggle}
+  onEdit={onEdit}
+  onDelete={onDelete}
+  onArchive={onArchive}
+  onView={onView}
+/>
       ))}
     </div>
   );
 }
+

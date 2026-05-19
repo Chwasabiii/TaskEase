@@ -1,4 +1,4 @@
-export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }) {
+export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive, onView }) {
   const priorityConfig = {
     low:    { color: "#10B981", bg: "rgba(16,185,129,0.1)",  label: "Low" },
     medium: { color: "#F59E0B", bg: "rgba(245,158,11,0.1)",  label: "Medium" },
@@ -65,7 +65,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
                 fontFamily: "var(--font-body)",
                 fontSize: "0.95rem",
                 fontWeight: 600,
-                color: isDone ? "#475569" : "#F1F5F9",
+                color: isDone ? "var(--color-muted)" : "var(--color-foreground)",
                 textDecoration: isDone ? "line-through" : "none",
               }}
             >
@@ -110,7 +110,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
               style={{
                 fontFamily: "var(--font-body)",
                 fontSize: "0.85rem",
-                color: "#64748B",
+                color: "var(--color-muted)",
                 marginBottom: "0.5rem",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -129,7 +129,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
                 style={{
                   fontSize: "0.75rem",
                   fontFamily: "var(--font-body)",
-                  color: isOverdue ? "#EF4444" : "#64748B",
+                  color: isOverdue ? "#EF4444" : "var(--color-muted)",
                   display: "flex",
                   alignItems: "center",
                   gap: "3px",
@@ -141,7 +141,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
 
             {/* Subtasks progress */}
             {totalSubtasks > 0 && (
-              <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-body)", color: "#64748B" }}>
+              <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-body)", color: "var(--color-muted)" }}>
                 ✓ {completedSubtasks}/{totalSubtasks} subtasks
               </span>
             )}
@@ -149,15 +149,39 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
         </div>
 
         {/* Actions */}
+
+
+        <button
+  onClick={() => onView(task)}
+  style={{
+    width: "30px", height: "30px",
+    borderRadius: "8px",
+    border: "1px solid var(--color-border)",
+    backgroundColor: "transparent",
+    color: "var(--color-muted)", cursor: "pointer",
+    fontSize: "0.8rem", transition: "all 0.2s",
+  }}
+  onMouseEnter={(e) => {
+    e.currentTarget.style.backgroundColor = "rgba(34,211,238,0.1)";
+    e.currentTarget.style.color = "#22D3EE";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.backgroundColor = "transparent";
+    e.currentTarget.style.color = "var(--color-muted)";
+  }}
+  title="View Details"
+>
+  ⊙
+</button>
         <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
           <button
             onClick={() => onEdit(task)}
             style={{
               width: "30px", height: "30px",
               borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--color-border)",
               backgroundColor: "transparent",
-              color: "#64748B",
+              color: "var(--color-muted)",
               cursor: "pointer",
               fontSize: "0.8rem",
               transition: "all 0.2s",
@@ -168,7 +192,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "#64748B";
+              e.currentTarget.style.color = "var(--color-muted)";
             }}
             title="Edit"
           >
@@ -179,9 +203,9 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
             style={{
               width: "30px", height: "30px",
               borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--color-border)",
               backgroundColor: "transparent",
-              color: "#64748B",
+              color: "var(--color-muted)",
               cursor: "pointer",
               fontSize: "0.8rem",
               transition: "all 0.2s",
@@ -192,7 +216,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "#64748B";
+              e.currentTarget.style.color = "var(--color-muted)";
             }}
             title="Archive"
           >
@@ -203,9 +227,9 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
             style={{
               width: "30px", height: "30px",
               borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--color-border)",
               backgroundColor: "transparent",
-              color: "#64748B",
+              color: "var(--color-muted)",
               cursor: "pointer",
               fontSize: "0.8rem",
               transition: "all 0.2s",
@@ -216,7 +240,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "#64748B";
+              e.currentTarget.style.color = "var(--color-muted)";
             }}
             title="Delete"
           >
@@ -227,3 +251,4 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive }
     </div>
   );
 }
+

@@ -1,8 +1,19 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
+import { VoiceCommandButton } from "../voice";
 
-export default function AppShell({ children, activePage, setActivePage, user, onSignOut, notifications }) {
+export default function AppShell({
+  children,
+  activePage,
+  setActivePage,
+  user,
+  onSignOut,
+  notifications,
+  onClearNotifications,
+  onNotificationAction,
+  onNotify,
+}) {
   const [collapsed, setCollapsed] = useState(false);
   const sidebarWidth = collapsed ? 72 : 240;
 
@@ -22,11 +33,19 @@ export default function AppShell({ children, activePage, setActivePage, user, on
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          transition: "margin-left 0.3s ease",
+          transition: "margin-left var(--motion-spring)",
           minHeight: "100vh",
         }}
       >
-        <Navbar activePage={activePage} user={user} onSignOut={onSignOut} setActivePage={setActivePage} notifications={notifications} />
+        <Navbar
+          activePage={activePage}
+          user={user}
+          onSignOut={onSignOut}
+          setActivePage={setActivePage}
+          notifications={notifications}
+          onClearNotifications={onClearNotifications}
+          onNotificationAction={onNotificationAction}
+        />
         <main
           style={{
             flex: 1,
@@ -34,9 +53,14 @@ export default function AppShell({ children, activePage, setActivePage, user, on
             overflowY: "auto",
           }}
         >
-          {children}
+          <div key={activePage} className="page-motion">
+            {children}
+          </div>
         </main>
+        <VoiceCommandButton setActivePage={setActivePage} onNotify={onNotify} />
       </div>
     </div>
   );
 }
+
+

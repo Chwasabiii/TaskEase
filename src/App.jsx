@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { PomodoroProvider } from "./context/PomodoroContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import AppShell from "./components/layout/AppShell";
-import Dashboard from "./pages/Dashboard";
-import Tasks from "./pages/Tasks";
-import Pomodoro from "./pages/Pomodoro";
-import Focus from "./pages/Focus";
-import Archive from "./pages/Archive";
-import Collaboration from "./pages/Collaboration";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
 import ProtectedRoute from "./routes/ProtectedRoute";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Pomodoro = lazy(() => import("./pages/Pomodoro"));
+const FocusMode = lazy(() => import("./pages/FocusMode"));
+const Archive = lazy(() => import("./pages/Archive"));
+const Collaboration = lazy(() => import("./pages/Collaboration"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -43,10 +46,14 @@ function AppContent() {
   if (loading) return null;
 
   if (!user) {
-    return showRegister ? (
-      <Register onSwitchToLogin={() => setShowRegister(false)} />
-    ) : (
-      <Login onSwitchToRegister={() => setShowRegister(true)} />
+    return (
+      <Suspense fallback={null}>
+        {showRegister ? (
+          <Register onSwitchToLogin={() => setShowRegister(false)} />
+        ) : (
+          <Login onSwitchToRegister={() => setShowRegister(true)} />
+        )}
+      </Suspense>
     );
   }
 
@@ -65,7 +72,7 @@ function AppContent() {
       case "pomodoro":
         return <Pomodoro onNotify={addNotification} />;
       case "focus":
-        return <Focus />;
+        return <FocusMode onNotify={addNotification} />;
       case "archive":
         return <Archive />;
       case "collaboration":
@@ -89,9 +96,11 @@ function AppContent() {
         onSignOut={signOut}
         user={user}
         notifications={notifications}
+        onClearNotifications={clearNotifications}
         onNotificationAction={handleNotificationAction}
+        onNotify={addNotification}
       >
-        {renderPage()}
+        <Suspense fallback={null}>{renderPage()}</Suspense>
       </AppShell>
     </ProtectedRoute>
   );
@@ -100,7 +109,11 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ThemeProvider>
+        <PomodoroProvider>
+          <AppContent />
+        </PomodoroProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTasks } from "../hooks/useTasks";
 import TaskList from "../components/tasks/TaskList";
 import TaskModal from "../components/tasks/TaskModal";
+import TaskDetailModal from "../components/tasks/TaskDetailModal";
 
 const FILTERS   = ["All", "Todo", "In Progress", "Done"];
 const PRIORITIES = ["All", "Urgent", "High", "Medium", "Low"];
@@ -12,6 +13,7 @@ export default function Tasks({ onNotify }) {
     createTask, updateTask,
     deleteTask, toggleComplete, archiveTask,
   } = useTasks();
+  const [viewingTask, setViewingTask] = useState(null);
 
   const [showModal, setShowModal]     = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -100,9 +102,9 @@ export default function Tasks({ onNotify }) {
   const pillStyle = (active) => ({
     padding: "0.35rem 0.875rem",
     borderRadius: "20px",
-    border: `1px solid ${active ? "#5B8CFF" : "rgba(255,255,255,0.08)"}`,
+    border: `1px solid ${active ? "#5B8CFF" : "var(--color-border)"}`,
     backgroundColor: active ? "rgba(91,140,255,0.15)" : "transparent",
-    color: active ? "#5B8CFF" : "#64748B",
+    color: active ? "#5B8CFF" : "var(--color-muted)",
     fontFamily: "var(--font-body)",
     fontSize: "0.8rem",
     fontWeight: active ? 600 : 400,
@@ -115,10 +117,10 @@ export default function Tasks({ onNotify }) {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.5rem", fontWeight: 700, color: "#F1F5F9" }}>
+          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.5rem", fontWeight: 700, color: "var(--color-foreground)" }}>
             My Tasks
           </h2>
-          <p style={{ color: "#64748B", fontFamily: "var(--font-body)", fontSize: "0.875rem" }}>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.875rem" }}>
             {tasks.length} task{tasks.length !== 1 ? "s" : ""} total
           </p>
         </div>
@@ -156,15 +158,15 @@ export default function Tasks({ onNotify }) {
           width: "100%",
           padding: "0.7rem 1rem",
           borderRadius: "10px",
-          border: "1px solid rgba(255,255,255,0.08)",
-          backgroundColor: "rgba(255,255,255,0.05)",
-          color: "#F1F5F9",
+          border: "1px solid var(--color-border)",
+          backgroundColor: "var(--color-hover)",
+          color: "var(--color-foreground)",
           fontFamily: "var(--font-body)",
           fontSize: "0.9rem",
           outline: "none",
         }}
         onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-        onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+        onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
       />
 
       {/* Filters */}
@@ -174,7 +176,7 @@ export default function Tasks({ onNotify }) {
             {f}
           </button>
         ))}
-        <div style={{ width: "1px", backgroundColor: "rgba(255,255,255,0.08)", margin: "0 0.25rem" }} />
+        <div style={{ width: "1px", backgroundColor: "var(--color-border)", margin: "0 0.25rem" }} />
         {PRIORITIES.map((p) => (
           <button key={p} style={pillStyle(priority === p)} onClick={() => setPriority(p)}>
             {p}
@@ -183,14 +185,15 @@ export default function Tasks({ onNotify }) {
       </div>
 
       {/* Task list */}
-      <TaskList
-        tasks={filtered}
-        loading={loading}
-        onToggle={handleToggle}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onArchive={handleArchive}
-      />
+     <TaskList
+  tasks={filtered}
+  loading={loading}
+  onToggle={handleToggle}
+  onEdit={handleEdit}
+  onDelete={handleDelete}
+  onArchive={handleArchive}
+  onView={setViewingTask}
+/>
 
       {/* Modal */}
       {showModal && (
@@ -200,6 +203,15 @@ export default function Tasks({ onNotify }) {
           onClose={handleClose}
         />
       )}
+
+      {viewingTask && (
+  <TaskDetailModal
+    task={viewingTask}
+    onClose={() => setViewingTask(null)}
+    onEdit={(task) => { setViewingTask(null); handleEdit(task); }}
+  />
+)}
     </div>
   );
 }
+

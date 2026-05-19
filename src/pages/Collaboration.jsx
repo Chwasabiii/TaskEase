@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCollaboration } from "../hooks/useCollaboration";
 import { useTasks } from "../hooks/useTasks";
@@ -9,7 +9,7 @@ import FileSection from "../components/collaboration/FileSection";
 import InviteModal from "../components/collaboration/InviteModal";
 import JoinModal from "../components/collaboration/JoinModal";
 
-export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
+export default function Collaboration({ selectedTaskId }) {
   const { user }  = useAuth();
   const { tasks } = useTasks();
   const {
@@ -24,33 +24,40 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
   const [activeTab, setActiveTab]       = useState("mine");
   const detailRef = useRef(null);
 
-  const handleSelectTask = async (task) => {
+  const handleSelectTask = useCallback(async (task) => {
     setSelectedTask(task);
     await fetchCollaborators(task.id);
-  };
+  }, [fetchCollaborators]);
 
   const myTasks    = tasks.slice(0, 20);
   const sharedList = sharedTasks.map((s) => s.task).filter(Boolean);
   const displayTasks = activeTab === "mine" ? myTasks : sharedList;
 
-  useEffect(() => {
+  const syncSelectedTask = useCallback(async () => {
     if (!selectedTaskId) return;
 
     const selected = [...sharedList, ...myTasks].find((task) => task?.id === selectedTaskId);
-    if (selected) {
-      const isShared = sharedList.some((task) => task?.id === selectedTaskId);
-      setActiveTab(isShared ? "shared" : "mine");
-      handleSelectTask(selected).then(() => {
-        detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
-  }, [selectedTaskId, sharedList.length, myTasks.length]);
+    if (!selected) return;
+
+    const isShared = sharedList.some((task) => task?.id === selectedTaskId);
+    setActiveTab(isShared ? "shared" : "mine");
+    await handleSelectTask(selected);
+    detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedTaskId, sharedList, myTasks, handleSelectTask]);
+
+  useEffect(() => {
+    const initializeSelectedTask = async () => {
+      await syncSelectedTask();
+    };
+
+    initializeSelectedTask();
+  }, [syncSelectedTask]);
 
   const tabStyle = (active) => ({
     flex: 1, padding: "0.5rem",
     borderRadius: "8px", border: "none",
     backgroundColor: active ? "rgba(91,140,255,0.15)" : "transparent",
-    color: active ? "#5B8CFF" : "#64748B",
+    color: active ? "#5B8CFF" : "var(--color-muted)",
     fontFamily: "var(--font-body)", fontSize: "0.875rem",
     fontWeight: active ? 600 : 400,
     cursor: "pointer", transition: "all 0.2s",
@@ -67,11 +74,11 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
         <div>
           <h2 style={{
             fontFamily: "var(--font-heading)", fontSize: "1.5rem",
-            fontWeight: 700, color: "#F1F5F9", marginBottom: "0.25rem",
+            fontWeight: 700, color: "var(--color-foreground)", marginBottom: "0.25rem",
           }}>
             Collaboration
           </h2>
-          <p style={{ color: "#64748B", fontFamily: "var(--font-body)", fontSize: "0.875rem" }}>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.875rem" }}>
             Work together on tasks in real time
           </p>
         </div>
@@ -106,7 +113,7 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
           {/* Tabs */}
           <div style={{
             display: "flex", gap: "4px", padding: "4px",
-            backgroundColor: "rgba(255,255,255,0.03)",
+            backgroundColor: "var(--color-subtle)",
             borderRadius: "10px",
           }}>
             <button style={tabStyle(activeTab === "mine")}   onClick={() => setActiveTab("mine")}>
@@ -121,7 +128,7 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", overflowY: "auto" }}>
             {displayTasks.length === 0 ? (
               <div className="glass-card" style={{ padding: "1.5rem", textAlign: "center" }}>
-                <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+                <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
                   {activeTab === "mine"
                     ? "No tasks yet — create one in My Tasks"
                     : "No shared tasks yet — join one with a code!"}
@@ -138,14 +145,14 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
                     style={{
                       width: "100%", textAlign: "left",
                       padding: "0.875rem 1rem", borderRadius: "10px",
-                      border: `1px solid ${isSelected ? "rgba(91,140,255,0.3)" : "rgba(255,255,255,0.06)"}`,
+                      border: `1px solid ${isSelected ? "rgba(91,140,255,0.3)" : "var(--color-border)"}`,
                       backgroundColor: isSelected
                         ? "rgba(91,140,255,0.1)"
                         : "rgba(17,24,39,0.5)",
                       cursor: "pointer", transition: "all 0.2s",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                      if (!isSelected) e.currentTarget.style.backgroundColor = "var(--color-hover)";
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) e.currentTarget.style.backgroundColor = "rgba(17,24,39,0.5)";
@@ -154,13 +161,13 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
                     <p style={{
                       fontFamily: "var(--font-body)", fontSize: "0.875rem",
                       fontWeight: 500,
-                      color: isSelected ? "#5B8CFF" : "#CBD5E1",
+                      color: isSelected ? "#5B8CFF" : "var(--color-muted)",
                       marginBottom: "0.2rem",
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     }}>
                       {task.title}
                     </p>
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "#475569" }}>
+                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-muted)" }}>
                       {task.priority} priority
                     </p>
                   </button>
@@ -179,11 +186,11 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
               justifyContent: "center", flexDirection: "column", gap: "1rem",
             }}>
               <div style={{ fontSize: "3rem" }}>👥</div>
-              <h3 style={{ fontFamily: "var(--font-heading)", color: "#F1F5F9" }}>
+              <h3 style={{ fontFamily: "var(--font-heading)", color: "var(--color-foreground)" }}>
                 Select a task to collaborate
               </h3>
               <p style={{
-                fontFamily: "var(--font-body)", color: "#475569",
+                fontFamily: "var(--font-body)", color: "var(--color-muted)",
                 fontSize: "0.9rem", textAlign: "center", maxWidth: "300px",
               }}>
                 Pick a task from the left to manage collaborators and comments,
@@ -214,11 +221,11 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
                   <div>
                     <h3 style={{
                       fontFamily: "var(--font-heading)", fontSize: "1.1rem",
-                      fontWeight: 700, color: "#F1F5F9", marginBottom: "0.2rem",
+                      fontWeight: 700, color: "var(--color-foreground)", marginBottom: "0.2rem",
                     }}>
                       {selectedTask.title}
                     </h3>
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "#64748B" }}>
+                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-muted)" }}>
                       Invite code:{" "}
                       <span style={{
                         fontFamily: "var(--font-mono)", color: "#5B8CFF",
@@ -246,12 +253,12 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
               <div className="glass-card" style={{ padding: "1.25rem" }}>
                 <h4 style={{
                   fontFamily: "var(--font-heading)", fontSize: "0.95rem",
-                  fontWeight: 600, color: "#94A3B8", marginBottom: "1rem",
+                  fontWeight: 600, color: "var(--color-muted)", marginBottom: "1rem",
                 }}>
                   👥 Collaborators {collaborators.length > 0 && `(${collaborators.length})`}
                 </h4>
                 {collaborators.length === 0 ? (
-                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "#334155" }}>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "var(--color-muted)" }}>
                     No collaborators yet — share the invite code!
                   </p>
                 ) : (
@@ -303,3 +310,5 @@ export default function Collaboration({ selectedTaskId, setSelectedTaskId }) {
     </div>
   );
 }
+
+

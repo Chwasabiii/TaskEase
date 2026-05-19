@@ -77,7 +77,7 @@ export default function ChecklistSection({ taskId }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
         <h4 style={{
           fontFamily: "var(--font-heading)", fontSize: "0.95rem",
-          fontWeight: 600, color: "#94A3B8",
+          fontWeight: 600, color: "var(--color-muted)",
         }}>
           Checklist {items.length > 0 && `(${completedCount}/${items.length})`}
         </h4>
@@ -94,9 +94,9 @@ export default function ChecklistSection({ taskId }) {
             flex: 1,
             padding: "0.6rem 0.875rem",
             borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.05)",
-            color: "#F1F5F9",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-hover)",
+            color: "var(--color-foreground)",
             fontFamily: "var(--font-body)",
             fontSize: "0.875rem",
             outline: "none",
@@ -138,11 +138,11 @@ export default function ChecklistSection({ taskId }) {
       )}
 
       {loading ? (
-        <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+        <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
           Loading checklist...
         </p>
       ) : items.length === 0 ? (
-        <p style={{ color: "#334155", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+        <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
           No checklist items yet.
         </p>
       ) : (
@@ -153,8 +153,8 @@ export default function ChecklistSection({ taskId }) {
               style={{
                 padding: "0.875rem",
                 borderRadius: "10px",
-                backgroundColor: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.06)",
+                backgroundColor: "var(--color-subtle)",
+                border: "1px solid var(--color-border)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "0.75rem",
@@ -187,7 +187,7 @@ export default function ChecklistSection({ taskId }) {
                       width: "100%",
                       border: "none",
                       backgroundColor: "transparent",
-                      color: item.is_done ? "#64748B" : "#CBD5E1",
+                      color: item.is_done ? "var(--color-muted)" : "var(--color-muted)",
                       textDecoration: item.is_done ? "line-through" : "none",
                       fontFamily: "var(--font-body)",
                       fontSize: "0.9rem",
@@ -204,9 +204,9 @@ export default function ChecklistSection({ taskId }) {
                       width: "100%",
                       padding: "0.55rem 0.7rem",
                       borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      backgroundColor: "rgba(255,255,255,0.03)",
-                      color: "#94A3B8",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-subtle)",
+                      color: "var(--color-muted)",
                       fontFamily: "var(--font-body)",
                       fontSize: "0.8rem",
                       resize: "vertical",
@@ -234,7 +234,7 @@ export default function ChecklistSection({ taskId }) {
               </div>
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem" }}>
-                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.74rem", color: "#475569" }}>
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.74rem", color: "var(--color-muted)" }}>
                   {(item.files || []).length} file{(item.files || []).length === 1 ? "" : "s"} attached
                 </p>
                 <ChecklistFileInput item={item} onUpload={uploadItemFile} />
@@ -260,13 +260,13 @@ export default function ChecklistSection({ taskId }) {
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        color: "#CBD5E1",
+                        color: "var(--color-muted)",
                         fontFamily: "var(--font-body)",
                         fontSize: "0.8rem",
                       }}>
                         {file.file_name}
                       </span>
-                      <span style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.72rem" }}>
+                      <span style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.72rem" }}>
                         {formatSize(file.file_size)}
                       </span>
                       <button onClick={() => viewFile(file)} style={fileButtonStyle}>View</button>
@@ -287,9 +287,9 @@ export default function ChecklistSection({ taskId }) {
 const fileButtonStyle = {
   padding: "0.3rem 0.5rem",
   borderRadius: "7px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  backgroundColor: "rgba(255,255,255,0.04)",
-  color: "#94A3B8",
+  border: "1px solid var(--color-border)",
+  backgroundColor: "var(--color-subtle)",
+  color: "var(--color-muted)",
   fontFamily: "var(--font-body)",
   fontSize: "0.72rem",
   cursor: "pointer",
@@ -301,3 +301,5 @@ const deleteButtonStyle = {
   backgroundColor: "rgba(239,68,68,0.08)",
   color: "#EF4444",
 };
+
+

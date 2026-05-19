@@ -18,6 +18,7 @@ export default function TaskModal({ task, onSave, onClose }) {
 
   useEffect(() => {
     if (task) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         title:       task.title || "",
         description: task.description || "",
@@ -47,9 +48,9 @@ export default function TaskModal({ task, onSave, onClose }) {
     width: "100%",
     padding: "0.7rem 1rem",
     borderRadius: "10px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    color: "#F1F5F9",
+    border: "1px solid var(--color-border)",
+    backgroundColor: "var(--color-hover)",
+    color: "var(--color-foreground)",
     fontFamily: "var(--font-body)",
     fontSize: "0.9rem",
     outline: "none",
@@ -61,7 +62,7 @@ export default function TaskModal({ task, onSave, onClose }) {
     fontFamily: "var(--font-body)",
     fontSize: "0.8rem",
     fontWeight: 500,
-    color: "#94A3B8",
+    color: "var(--color-muted)",
     marginBottom: "0.35rem",
   };
 
@@ -85,7 +86,7 @@ export default function TaskModal({ task, onSave, onClose }) {
       >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.25rem", fontWeight: 700, color: "#F1F5F9" }}>
+          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.25rem", fontWeight: 700, color: "var(--color-foreground)" }}>
             {isEditing ? "Edit Task" : "New Task"}
           </h2>
           <button
@@ -93,9 +94,9 @@ export default function TaskModal({ task, onSave, onClose }) {
             style={{
               width: "32px", height: "32px",
               borderRadius: "8px",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--color-border)",
               backgroundColor: "transparent",
-              color: "#64748B",
+              color: "var(--color-muted)",
               cursor: "pointer",
               fontSize: "1rem",
             }}
@@ -131,7 +132,7 @@ export default function TaskModal({ task, onSave, onClose }) {
               placeholder="What needs to be done?"
               style={inputStyle}
               onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-              onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+              onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
               autoFocus
             />
           </div>
@@ -146,7 +147,7 @@ export default function TaskModal({ task, onSave, onClose }) {
               rows={3}
               style={{ ...inputStyle, resize: "vertical" }}
               onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-              onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+              onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
             />
           </div>
 
@@ -159,7 +160,7 @@ export default function TaskModal({ task, onSave, onClose }) {
                 onChange={(e) => setForm({ ...form, priority: e.target.value })}
                 style={{ ...inputStyle, cursor: "pointer" }}
                 onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
               >
                 <option value="low">🟢 Low</option>
                 <option value="medium">🟡 Medium</option>
@@ -174,7 +175,7 @@ export default function TaskModal({ task, onSave, onClose }) {
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
                 style={{ ...inputStyle, cursor: "pointer" }}
                 onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
               >
                 <option value="todo">📋 To Do</option>
                 <option value="in_progress">⚡ In Progress</option>
@@ -192,7 +193,7 @@ export default function TaskModal({ task, onSave, onClose }) {
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
                 style={{ ...inputStyle, cursor: "pointer" }}
                 onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
               >
                 <option value="">No category</option>
                 {CATEGORIES.map((c) => (
@@ -208,7 +209,7 @@ export default function TaskModal({ task, onSave, onClose }) {
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
                 style={{ ...inputStyle, colorScheme: "dark" }}
                 onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.08)"}
+                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
               />
             </div>
           </div>
@@ -221,9 +222,9 @@ export default function TaskModal({ task, onSave, onClose }) {
                 flex: 1,
                 padding: "0.75rem",
                 borderRadius: "10px",
-                border: "1px solid rgba(255,255,255,0.08)",
+                border: "1px solid var(--color-border)",
                 backgroundColor: "transparent",
-                color: "#94A3B8",
+                color: "var(--color-muted)",
                 fontFamily: "var(--font-body)",
                 fontWeight: 500,
                 cursor: "pointer",
@@ -258,3 +259,4 @@ export default function TaskModal({ task, onSave, onClose }) {
     </div>
   );
 }
+

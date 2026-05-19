@@ -41,7 +41,7 @@ export default function FileSection({ taskId }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
         <h4 style={{
           fontFamily: "var(--font-heading)", fontSize: "0.95rem",
-          fontWeight: 600, color: "#94A3B8",
+          fontWeight: 600, color: "var(--color-muted)",
         }}>
           Files {files.length > 0 && `(${files.length})`}
         </h4>
@@ -81,11 +81,11 @@ export default function FileSection({ taskId }) {
       )}
 
       {loading ? (
-        <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+        <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
           Loading files...
         </p>
       ) : files.length === 0 ? (
-        <p style={{ color: "#334155", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+        <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
           No shared files yet.
         </p>
       ) : (
@@ -102,8 +102,8 @@ export default function FileSection({ taskId }) {
                   gap: "0.75rem",
                   padding: "0.75rem 0.875rem",
                   borderRadius: "10px",
-                  backgroundColor: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  backgroundColor: "var(--color-subtle)",
+                  border: "1px solid var(--color-border)",
                 }}
               >
                 <div style={{
@@ -120,12 +120,12 @@ export default function FileSection({ taskId }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{
                     fontFamily: "var(--font-body)", fontSize: "0.875rem",
-                    fontWeight: 500, color: "#CBD5E1",
+                    fontWeight: 500, color: "var(--color-muted)",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                   }}>
                     {file.file_name}
                   </p>
-                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "#475569" }}>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-muted)" }}>
                     {formatSize(file.file_size)} · {formatDate(file.created_at)}
                   </p>
                 </div>
@@ -136,9 +136,9 @@ export default function FileSection({ taskId }) {
                     style={{
                       padding: "0.35rem 0.625rem",
                       borderRadius: "8px",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                      color: "#94A3B8",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-subtle)",
+                      color: "var(--color-muted)",
                       fontFamily: "var(--font-body)",
                       fontSize: "0.76rem",
                       cursor: "pointer",
@@ -187,3 +187,5 @@ export default function FileSection({ taskId }) {
     </div>
   );
 }
+
+

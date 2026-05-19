@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
@@ -9,7 +9,7 @@ export function useCollaboration() {
   const [loading, setLoading]             = useState(true);
 
   // Fetch tasks shared with me
-  const fetchSharedTasks = async () => {
+  const fetchSharedTasks = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
@@ -22,7 +22,7 @@ export function useCollaboration() {
       .eq("user_id", user.id);
     if (!error) setSharedTasks(data || []);
     setLoading(false);
-  };
+  }, [user]);
 
   // Fetch collaborators for a specific task
   const fetchCollaborators = async (taskId) => {
@@ -113,7 +113,12 @@ export function useCollaboration() {
     return { data, error };
   };
 
-  useEffect(() => { fetchSharedTasks(); }, [user]);
+  useEffect(() => {
+    const loadSharedTasks = async () => {
+      await fetchSharedTasks();
+    };
+    loadSharedTasks();
+  }, [fetchSharedTasks]);
 
   return {
     sharedTasks, collaborators, loading,

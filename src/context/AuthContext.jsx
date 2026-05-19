@@ -1,20 +1,21 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext({});
 
-const isInvalidRefreshTokenError = (error) =>
-  error?.message?.toLowerCase().includes("invalid refresh token");
-
-const clearStoredSupabaseSession = () => {
-  Object.keys(localStorage)
-    .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
-    .forEach((key) => localStorage.removeItem(key));
-};
-
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const isInvalidRefreshTokenError = (error) =>
+    error?.message?.toLowerCase().includes("invalid refresh token");
+
+  const clearStoredSupabaseSession = () => {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
+      .forEach((key) => localStorage.removeItem(key));
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -85,3 +86,5 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 
@@ -7,7 +7,7 @@ export function useComments(taskId) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading]   = useState(true);
 
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     if (!taskId) return;
     setLoading(true);
     const { data, error } = await supabase
@@ -17,12 +17,15 @@ export function useComments(taskId) {
       .order("created_at", { ascending: true });
     if (!error) setComments(data || []);
     setLoading(false);
-  };
+  }, [taskId]);
 
   // Realtime subscription
   useEffect(() => {
     if (!taskId) return;
-    fetchComments();
+    const loadComments = async () => {
+      await fetchComments();
+    };
+    loadComments();
 
     const channel = supabase
       .channel(`comments:${taskId}`)
@@ -49,7 +52,7 @@ export function useComments(taskId) {
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [taskId]);
+  }, [fetchComments, taskId]);
 
   const addComment = async (content) => {
     if (!content.trim()) return;

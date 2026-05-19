@@ -1,7 +1,7 @@
 const ROLE_COLORS = {
   owner:  { color: "#5B8CFF", bg: "rgba(91,140,255,0.1)"  },
   editor: { color: "#10B981", bg: "rgba(16,185,129,0.1)"  },
-  viewer: { color: "#64748B", bg: "rgba(100,116,139,0.1)" },
+  viewer: { color: "var(--color-muted)", bg: "rgba(100,116,139,0.1)" },
 };
 
 export default function CollaboratorList({ collaborators, currentUserId, onUpdateRole, onRemove }) {
@@ -22,8 +22,8 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
               display: "flex", alignItems: "center", gap: "0.75rem",
               padding: "0.625rem 0.875rem",
               borderRadius: "10px",
-              backgroundColor: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              backgroundColor: "var(--color-subtle)",
+              border: "1px solid var(--color-border)",
             }}
           >
             {/* Avatar */}
@@ -41,11 +41,11 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
             <div style={{ flex: 1 }}>
               <p style={{
                 fontFamily: "var(--font-body)", fontSize: "0.875rem",
-                fontWeight: 500, color: "#CBD5E1",
+                fontWeight: 500, color: "var(--color-muted)",
               }}>
                 {c.profile?.full_name ?? "Unknown User"}
                 {isSelf && (
-                  <span style={{ color: "#475569", fontWeight: 400, marginLeft: "0.4rem" }}>
+                  <span style={{ color: "var(--color-muted)", fontWeight: 400, marginLeft: "0.4rem" }}>
                     (you)
                   </span>
                 )}
@@ -88,9 +88,9 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
                 onClick={() => onRemove(c.id)}
                 style={{
                   width: "28px", height: "28px", borderRadius: "6px",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  border: "1px solid var(--color-border)",
                   backgroundColor: "transparent",
-                  color: "#475569", cursor: "pointer", fontSize: "0.8rem",
+                  color: "var(--color-muted)", cursor: "pointer", fontSize: "0.8rem",
                   transition: "all 0.2s",
                 }}
                 onMouseEnter={(e) => {
@@ -99,7 +99,7 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = "#475569";
+                  e.currentTarget.style.color = "var(--color-muted)";
                 }}
                 title="Remove collaborator"
               >
@@ -112,3 +112,4 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
     </div>
   );
 }
+

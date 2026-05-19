@@ -1,18 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useTasks } from "../hooks/useTasks";
 import { useCollaboration } from "../hooks/useCollaboration";
 
-export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify }) {
+export default function Dashboard({ setActivePage, onSelectSharedTask }) {
   const { user } = useAuth();
   const { tasks, loading } = useTasks();
   const { sharedTasks, loading: sharedLoading } = useCollaboration();
   const isLoading = loading || sharedLoading;
-
-  const prevSharedCount = useRef(null);
-  const prevOverdue = useRef(null);
-  const prevDoneToday = useRef(null);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -44,10 +38,10 @@ export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify 
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
       {/* Welcome */}
       <div>
-        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.75rem", fontWeight: 700, color: "#F1F5F9", marginBottom: "0.25rem" }}>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.75rem", fontWeight: 700, color: "var(--color-foreground)", marginBottom: "0.25rem" }}>
           {greeting} 👋
         </h2>
-        <p style={{ color: "#64748B", fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
+        <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.95rem" }}>
           Here's what's on your plate today — including tasks shared with you.
         </p>
       </div>
@@ -63,7 +57,7 @@ export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify 
             <div style={{ fontFamily: "var(--font-heading)", fontSize: "2rem", fontWeight: 700, color: stat.color, marginBottom: "0.25rem" }}>
               {isLoading ? "—" : stat.value}
             </div>
-            <div style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#64748B" }}>
+            <div style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-muted)" }}>
               {stat.label}
             </div>
           </div>
@@ -73,32 +67,32 @@ export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify 
       {/* Shared with me */}
       <div className="glass-card" style={{ padding: "1.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-          <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", fontWeight: 600, color: "#F1F5F9" }}>
+          <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", fontWeight: 600, color: "var(--color-foreground)" }}>
             Shared with me
           </h3>
-          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#94A3B8" }}>
+          <span style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-muted)" }}>
             {sharedTaskItems.length} task{sharedTaskItems.length !== 1 ? "s" : ""}
           </span>
         </div>
 
         {isLoading ? (
-          <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>Loading shared tasks...</p>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>Loading shared tasks...</p>
         ) : sharedTaskItems.length === 0 ? (
-          <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
             No shared tasks yet — collaborate with a teammate or join using an invite code.
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {sharedTaskItems.slice(0, 3).map((task) => (
-              <div key={task.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.75rem 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <div key={task.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.75rem", padding: "0.75rem 0", borderBottom: "1px solid var(--color-subtle)" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: 0 }}>
-                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "#F1F5F9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.title}</span>
-                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "#94A3B8" }}>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--color-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.title}</span>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-muted)" }}>
                     Shared by {task.user_id === user?.id ? "you" : "a collaborator"}
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "#475569" }}>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-muted)" }}>
                     {task.priority}
                   </span>
                   <button
@@ -128,13 +122,13 @@ export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify 
 
       {/* Recent tasks */}
       <div className="glass-card" style={{ padding: "1.5rem" }}>
-        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", fontWeight: 600, color: "#F1F5F9", marginBottom: "1rem" }}>
+        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", fontWeight: 600, color: "var(--color-foreground)", marginBottom: "1rem" }}>
           Recent Tasks
         </h3>
         {isLoading ? (
-          <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>Loading...</p>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>Loading...</p>
         ) : recentTasks.length === 0 ? (
-          <p style={{ color: "#475569", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
+          <p style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
             No tasks yet — go to My Tasks to create one!
           </p>
         ) : (
@@ -147,7 +141,7 @@ export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify 
                   alignItems: "center",
                   gap: "0.75rem",
                   padding: "0.625rem 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                  borderBottom: "1px solid var(--color-subtle)",
                 }}
               >
                 <span style={{
@@ -156,18 +150,18 @@ export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify 
                 }} />
                 <span style={{
                   fontFamily: "var(--font-body)", fontSize: "0.875rem",
-                  color: task.status === "done" ? "#475569" : "#CBD5E1",
+                  color: task.status === "done" ? "var(--color-muted)" : "var(--color-muted)",
                   textDecoration: task.status === "done" ? "line-through" : "none",
                   flex: 1,
                 }}>
                   {task.title}
                   {user && task.user_id !== user.id ? (
-                    <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", color: "#94A3B8" }}>
+                    <span style={{ marginLeft: "0.5rem", fontSize: "0.7rem", color: "var(--color-muted)" }}>
                       (Shared)
                     </span>
                   ) : null}
                 </span>
-                <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "#475569" }}>
+                <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-muted)" }}>
                   {task.priority}
                 </span>
               </div>
@@ -178,3 +172,4 @@ export default function Dashboard({ setActivePage, onSelectSharedTask, onNotify 
     </div>
   );
 }
+
