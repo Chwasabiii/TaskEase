@@ -22,7 +22,13 @@ export default function TaskDetailModal({ task, onClose, onEdit }) {
   const [fileError, setFileError] = useState("");
 
   const formatDate = (date) => date
-    ? new Date(date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    ? new Date(date).toLocaleString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
     : "No due date";
 
   const formatSize = (bytes) => {

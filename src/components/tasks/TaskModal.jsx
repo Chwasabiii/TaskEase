@@ -2,8 +2,34 @@ import { useState, useEffect } from "react";
 
 const CATEGORIES = ["Work", "Personal", "Health", "Learning", "Finance", "Other"];
 
+const getTodayDateValue = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getTimeValue = (date) => {
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return "";
+  const hours = String(parsedDate.getHours()).padStart(2, "0");
+  const minutes = String(parsedDate.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+const getDateValue = (date) => {
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return "";
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+  const day = String(parsedDate.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export default function TaskModal({ task, onSave, onClose }) {
   const isEditing = !!task;
+  const todayDateValue = getTodayDateValue();
 
   const [form, setForm] = useState({
     title:       "",
@@ -11,6 +37,7 @@ export default function TaskModal({ task, onSave, onClose }) {
     priority:    "medium",
     category:    "",
     due_date:    "",
+    due_time:    "",
     status:      "todo",
   });
   const [loading, setLoading] = useState(false);
@@ -24,7 +51,8 @@ export default function TaskModal({ task, onSave, onClose }) {
         description: task.description || "",
         priority:    task.priority || "medium",
         category:    task.category || "",
-        due_date:    task.due_date ? task.due_date.slice(0, 10) : "",
+        due_date:    task.due_date ? getDateValue(task.due_date) : "",
+        due_time:    task.due_date ? getTimeValue(task.due_date) : "",
         status:      task.status || "todo",
       });
     }
@@ -32,11 +60,28 @@ export default function TaskModal({ task, onSave, onClose }) {
 
   const handleSave = async () => {
     if (!form.title.trim()) return setError("Title is required.");
+    if (form.due_date && form.due_date < todayDateValue) {
+      return setError("Due date cannot be in the past.");
+    }
+    if (form.due_time && !form.due_date) {
+      return setError("Choose a due date before adding a due time.");
+    }
+
+    const dueDateTime = form.due_date
+      ? new Date(`${form.due_date}T${form.due_time || "23:59"}`)
+      : null;
+
+    if (dueDateTime && dueDateTime < new Date()) {
+      return setError("Due date and time cannot be in the past.");
+    }
+
     setLoading(true);
     setError("");
+    const taskPayload = { ...form };
+    delete taskPayload.due_time;
     const payload = {
-      ...form,
-      due_date: form.due_date ? new Date(form.due_date).toISOString() : null,
+      ...taskPayload,
+      due_date: dueDateTime ? dueDateTime.toISOString() : null,
     };
     const { error } = await onSave(payload);
     if (error) setError(error.message);
@@ -206,12 +251,31 @@ export default function TaskModal({ task, onSave, onClose }) {
               <input
                 type="date"
                 value={form.due_date}
+                min={todayDateValue}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
                 style={{ ...inputStyle, colorScheme: "dark" }}
                 onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
                 onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
               />
             </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Due Time</label>
+            <input
+              type="time"
+              value={form.due_time}
+              disabled={!form.due_date}
+              onChange={(e) => setForm({ ...form, due_time: e.target.value })}
+              style={{
+                ...inputStyle,
+                colorScheme: "dark",
+                opacity: form.due_date ? 1 : 0.65,
+                cursor: form.due_date ? "text" : "not-allowed",
+              }}
+              onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
+              onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
+            />
           </div>
 
           {/* Buttons */}

@@ -92,23 +92,20 @@ export function useCollaboration() {
     return { error };
   };
 
-  // Invite user by email
+  // Invite a registered user by email
   const inviteByEmail = async (taskId, email, role = "viewer") => {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("username", email)
-      .single();
-
-    if (profileError || !profile) {
-      return { error: { message: "User not found. They must be registered on TaskEase." } };
-    }
-
     const { data, error } = await supabase
-      .from("collaborators")
-      .insert([{ task_id: taskId, user_id: profile.id, role }])
-      .select()
+      .rpc("invite_user_to_task", {
+        p_task_id: taskId,
+        p_email: email.trim(),
+        p_role: role,
+      })
       .single();
+
+    if (!error) {
+      await fetchCollaborators(taskId);
+      await fetchSharedTasks();
+    }
 
     return { data, error };
   };

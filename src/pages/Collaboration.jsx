@@ -15,19 +15,49 @@ export default function Collaboration({ selectedTaskId }) {
   const {
     sharedTasks, collaborators,
     fetchCollaborators, generateInviteCode,
-    joinByCode, updateRole, removeCollaborator,
+    inviteByEmail, joinByCode, updateRole, removeCollaborator,
   } = useCollaboration();
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [showInvite, setShowInvite]     = useState(false);
   const [showJoin, setShowJoin]         = useState(false);
   const [activeTab, setActiveTab]       = useState("mine");
+  const [inviteEmail, setInviteEmail]   = useState("");
+  const [inviteRole, setInviteRole]     = useState("viewer");
+  const [inviteError, setInviteError]   = useState("");
+  const [inviteStatus, setInviteStatus] = useState("");
+  const [inviting, setInviting]         = useState(false);
   const detailRef = useRef(null);
 
   const handleSelectTask = useCallback(async (task) => {
     setSelectedTask(task);
+    setInviteEmail("");
+    setInviteError("");
+    setInviteStatus("");
     await fetchCollaborators(task.id);
   }, [fetchCollaborators]);
+
+  const handleInviteByEmail = async () => {
+    if (!selectedTask) return;
+    if (!inviteEmail.trim()) {
+      setInviteError("Enter the email address of a registered user.");
+      return;
+    }
+
+    setInviting(true);
+    setInviteError("");
+    setInviteStatus("");
+
+    const { data, error } = await inviteByEmail(selectedTask.id, inviteEmail, inviteRole);
+    if (error) {
+      setInviteError(error.message || "Could not add collaborator.");
+    } else {
+      setInviteStatus(`${data?.full_name || inviteEmail} was added as ${data?.role || inviteRole}.`);
+      setInviteEmail("");
+    }
+
+    setInviting(false);
+  };
 
   const myTasks    = tasks.slice(0, 20);
   const sharedList = sharedTasks.map((s) => s.task).filter(Boolean);
@@ -257,6 +287,74 @@ export default function Collaboration({ selectedTaskId }) {
                 }}>
                   👥 Collaborators {collaborators.length > 0 && `(${collaborators.length})`}
                 </h4>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 120px auto", gap: "0.5rem", marginBottom: "1rem" }}>
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleInviteByEmail()}
+                    placeholder="Add by registered email"
+                    style={{
+                      minWidth: 0,
+                      padding: "0.65rem 0.85rem",
+                      borderRadius: "10px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-hover)",
+                      color: "var(--color-foreground)",
+                      fontFamily: "var(--font-body)",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
+                    onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
+                  />
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    style={{
+                      padding: "0.65rem 0.75rem",
+                      borderRadius: "10px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-hover)",
+                      color: "var(--color-foreground)",
+                      fontFamily: "var(--font-body)",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="viewer">viewer</option>
+                    <option value="editor">editor</option>
+                  </select>
+                  <button
+                    onClick={handleInviteByEmail}
+                    disabled={inviting}
+                    style={{
+                      padding: "0.65rem 1rem",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: inviting
+                        ? "rgba(91,140,255,0.5)"
+                        : "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+                      color: "white",
+                      fontFamily: "var(--font-body)",
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      cursor: inviting ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {inviting ? "Adding..." : "Add"}
+                  </button>
+                </div>
+                {inviteError && (
+                  <p style={{ margin: "0 0 1rem", color: "#EF4444", fontFamily: "var(--font-body)", fontSize: "0.82rem" }}>
+                    {inviteError}
+                  </p>
+                )}
+                {inviteStatus && (
+                  <p style={{ margin: "0 0 1rem", color: "#10B981", fontFamily: "var(--font-body)", fontSize: "0.82rem" }}>
+                    {inviteStatus}
+                  </p>
+                )}
                 {collaborators.length === 0 ? (
                   <p style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "var(--color-muted)" }}>
                     No collaborators yet — share the invite code!

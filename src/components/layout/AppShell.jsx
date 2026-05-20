@@ -12,6 +12,7 @@ export default function AppShell({
   notifications,
   onClearNotifications,
   onNotificationAction,
+  onSendProfileRequest,
   onNotify,
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -45,6 +46,7 @@ export default function AppShell({
           notifications={notifications}
           onClearNotifications={onClearNotifications}
           onNotificationAction={onNotificationAction}
+          onSendProfileRequest={onSendProfileRequest}
         />
         <main
           style={{

@@ -7,6 +7,16 @@ import TaskDetailModal from "../components/tasks/TaskDetailModal";
 const FILTERS   = ["All", "Todo", "In Progress", "Done"];
 const PRIORITIES = ["All", "Urgent", "High", "Medium", "Low"];
 
+const formatDueDateTime = (date) => date
+  ? new Date(date).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    })
+  : null;
+
 export default function Tasks({ onNotify }) {
   const {
     tasks, loading,
@@ -22,22 +32,32 @@ export default function Tasks({ onNotify }) {
   const [search, setSearch]           = useState("");
 
   const handleSave = async (formData) => {
+    const dueDateText = formatDueDateTime(formData.due_date);
+
     if (editingTask) {
       const result = await updateTask(editingTask.id, formData);
-      onNotify?.({
-        title: "Task updated",
-        message: `${formData.title} was updated successfully.`,
-        type: "task",
-      });
+      if (!result.error) {
+        onNotify?.({
+          title: "Task updated",
+          message: dueDateText
+            ? `${formData.title} is due ${dueDateText}.`
+            : `${formData.title} was updated successfully.`,
+          type: "task",
+        });
+      }
       return result;
     }
 
     const result = await createTask(formData);
-    onNotify?.({
-      title: "New task created",
-      message: `${formData.title} was added to your list.`,
-      type: "task",
-    });
+    if (!result.error) {
+      onNotify?.({
+        title: "New task created",
+        message: dueDateText
+          ? `${formData.title} is due ${dueDateText}.`
+          : `${formData.title} was added to your list.`,
+        type: "task",
+      });
+    }
     return result;
   };
 

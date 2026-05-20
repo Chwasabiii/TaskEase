@@ -1,9 +1,10 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PomodoroProvider } from "./context/PomodoroContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import AppShell from "./components/layout/AppShell";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import { supabase } from "./lib/supabase";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Tasks = lazy(() => import("./pages/Tasks"));
@@ -11,6 +12,7 @@ const Pomodoro = lazy(() => import("./pages/Pomodoro"));
 const FocusMode = lazy(() => import("./pages/FocusMode"));
 const Archive = lazy(() => import("./pages/Archive"));
 const Collaboration = lazy(() => import("./pages/Collaboration"));
+const Profile = lazy(() => import("./pages/Profile"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 
@@ -21,7 +23,7 @@ function AppContent() {
   const [showRegister, setShowRegister] = useState(false);
   const [notifications, setNotifications] = useState([]);
 
-  const addNotification = (notification) => {
+  const addNotification = useCallback((notification) => {
     setNotifications((prev) => [
       {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -30,11 +32,101 @@ function AppContent() {
       },
       ...prev,
     ]);
-  };
+  }, []);
 
   const clearNotifications = () => setNotifications([]);
 
+  const loadProfileRequests = useCallback(async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("profile_connections")
+      .select("id, created_at, requester:profiles!profile_connections_requester_id_fkey(id, username, full_name, avatar_url)")
+      .eq("addressee_id", user.id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) return;
+
+    setNotifications((prev) => {
+      const nonRequestNotifications = prev.filter((notification) => notification.type !== "profile_request");
+      const requestNotifications = (data || []).map((request) => ({
+        id: `profile-request-${request.id}`,
+        created_at: request.created_at,
+        title: "Profile request",
+        message: `${request.requester?.full_name || request.requester?.username || "Someone"} wants to add your profile.`,
+        type: "profile_request",
+        requestId: request.id,
+        requesterId: request.requester?.id,
+        targetPage: "profile",
+      }));
+
+      return [...requestNotifications, ...nonRequestNotifications];
+    });
+  }, [user]);
+
+  useEffect(() => {
+    loadProfileRequests();
+    const intervalId = window.setInterval(loadProfileRequests, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadProfileRequests]);
+
+  const handleSendProfileRequest = async (profileId) => {
+    if (!user || !profileId) {
+      return { error: { message: "You must be signed in to add profiles." } };
+    }
+
+    const { error } = await supabase
+      .from("profile_connections")
+      .insert({
+        requester_id: user.id,
+        addressee_id: profileId,
+        status: "pending",
+        updated_at: new Date().toISOString(),
+      });
+
+    if (!error) {
+      addNotification({
+        title: "Request sent",
+        message: "Your profile request was sent.",
+        type: "profile",
+      });
+    }
+
+    return { error };
+  };
+
+  const handleProfileRequestResponse = async (requestId, status) => {
+    const { error } = await supabase
+      .from("profile_connections")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", requestId);
+
+    if (!error) {
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== `profile-request-${requestId}`)
+      );
+      addNotification({
+        title: status === "accepted" ? "Profile request accepted" : "Profile request ignored",
+        message: status === "accepted" ? "The profile was added." : "The request was dismissed.",
+        type: "profile",
+      });
+      await loadProfileRequests();
+    }
+
+    return { error };
+  };
+
   const handleNotificationAction = (notification) => {
+    if (notification.action === "accept_profile_request") {
+      handleProfileRequestResponse(notification.requestId, "accepted");
+      return;
+    }
+    if (notification.action === "ignore_profile_request") {
+      handleProfileRequestResponse(notification.requestId, "ignored");
+      return;
+    }
     if (notification.targetTaskId) {
       setSelectedTaskId(notification.targetTaskId);
     }
@@ -83,6 +175,8 @@ function AppContent() {
             onNotify={addNotification}
           />
         );
+      case "profile":
+        return <Profile onNotify={addNotification} />;
       default:
         return <Dashboard onNotify={addNotification} />;
     }
@@ -98,6 +192,7 @@ function AppContent() {
         notifications={notifications}
         onClearNotifications={clearNotifications}
         onNotificationAction={handleNotificationAction}
+        onSendProfileRequest={handleSendProfileRequest}
         onNotify={addNotification}
       >
         <Suspense fallback={null}>{renderPage()}</Suspense>

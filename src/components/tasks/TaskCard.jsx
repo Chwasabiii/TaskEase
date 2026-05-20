@@ -15,8 +15,9 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive, 
 
   const formatDate = (date) => {
     if (!date) return null;
-    return new Date(date).toLocaleDateString("en-US", {
+    return new Date(date).toLocaleString("en-US", {
       month: "short", day: "numeric", year: "numeric",
+      hour: "numeric", minute: "2-digit",
     });
   };
 
