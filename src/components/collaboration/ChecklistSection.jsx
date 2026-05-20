@@ -167,8 +167,8 @@ export default function ChecklistSection({ taskId }) {
                     width: "22px",
                     height: "22px",
                     borderRadius: "6px",
-                    border: `2px solid ${item.is_done ? "#10B981" : "rgba(255,255,255,0.2)"}`,
-                    backgroundColor: item.is_done ? "#10B981" : "transparent",
+                    border: `2px solid ${item.is_done ? "#10B981" : "var(--color-border)"}`,
+                    backgroundColor: item.is_done ? "#10B981" : "var(--color-surface)",
                     color: "white",
                     cursor: "pointer",
                     flexShrink: 0,
@@ -251,7 +251,7 @@ export default function ChecklistSection({ taskId }) {
                         gap: "0.5rem",
                         padding: "0.5rem 0.625rem",
                         borderRadius: "8px",
-                        backgroundColor: "rgba(15,23,42,0.45)",
+                        backgroundColor: "var(--color-surface)",
                       }}
                     >
                       <span style={{

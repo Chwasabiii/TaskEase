@@ -162,7 +162,7 @@ export default function FocusMode({ onNotify }) {
       {showBreak && (
         <div style={{
           position: "fixed", inset: 0,
-          backgroundColor: "rgba(0,0,0,0.85)",
+          backgroundColor: "var(--color-overlay)",
           backdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", justifyContent: "center",
           zIndex: 200,
@@ -497,8 +497,8 @@ function FocusChecklist({ taskId }) {
             <div style={{
               width: "18px", height: "18px", flexShrink: 0,
               borderRadius: "5px",
-              border: `2px solid ${item.is_done ? "#10B981" : "rgba(255,255,255,0.2)"}`,
-              backgroundColor: item.is_done ? "#10B981" : "transparent",
+              border: `2px solid ${item.is_done ? "#10B981" : "var(--color-border)"}`,
+              backgroundColor: item.is_done ? "#10B981" : "var(--color-surface)",
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "all 0.2s",
             }}>

@@ -115,7 +115,7 @@ export default function TaskModal({ task, onSave, onClose }) {
     <div
       style={{
         position: "fixed", inset: 0,
-        backgroundColor: "rgba(0,0,0,0.6)",
+        backgroundColor: "var(--color-overlay)",
         backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
@@ -253,7 +253,7 @@ export default function TaskModal({ task, onSave, onClose }) {
                 value={form.due_date}
                 min={todayDateValue}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                style={{ ...inputStyle, colorScheme: "dark" }}
+                style={inputStyle}
                 onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
                 onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
               />
@@ -269,7 +269,6 @@ export default function TaskModal({ task, onSave, onClose }) {
               onChange={(e) => setForm({ ...form, due_time: e.target.value })}
               style={{
                 ...inputStyle,
-                colorScheme: "dark",
                 opacity: form.due_date ? 1 : 0.65,
                 cursor: form.due_date ? "text" : "not-allowed",
               }}

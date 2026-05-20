@@ -270,7 +270,7 @@ export default function VoiceCommandButton({ setActivePage, onNotify }) {
             display: "grid",
             placeItems: "center",
             padding: "1.5rem",
-            backgroundColor: "rgba(2, 6, 23, 0.52)",
+            backgroundColor: "var(--color-backdrop)",
             backdropFilter: "blur(10px)",
           }}
           onClick={(event) => {
@@ -284,7 +284,7 @@ export default function VoiceCommandButton({ setActivePage, onNotify }) {
               borderRadius: "28px",
               border: "1px solid var(--color-border)",
               backgroundColor: "var(--color-surface-strong)",
-              boxShadow: "0 30px 90px rgba(2, 6, 23, 0.42)",
+              boxShadow: "0 30px 90px var(--color-glow)",
               overflow: "hidden",
             }}
           >

@@ -45,7 +45,7 @@ export default function InviteModal({ task, inviteCode, onJoinByCode, onClose })
     <div
       style={{
         position: "fixed", inset: 0,
-        backgroundColor: "rgba(0,0,0,0.6)",
+        backgroundColor: "var(--color-overlay)",
         backdropFilter: "blur(4px)",
         display: "flex", alignItems: "center", justifyContent: "center",
         zIndex: 100, padding: "1rem",

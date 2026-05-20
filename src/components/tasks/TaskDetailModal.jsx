@@ -63,7 +63,7 @@ export default function TaskDetailModal({ task, onClose, onEdit }) {
     <div
       style={{
         position: "fixed", inset: 0,
-        backgroundColor: "rgba(0,0,0,0.7)",
+        backgroundColor: "var(--color-overlay)",
         backdropFilter: "blur(6px)",
         display: "flex", alignItems: "center", justifyContent: "center",
         zIndex: 100, padding: "1rem",

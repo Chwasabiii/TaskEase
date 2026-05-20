@@ -177,8 +177,8 @@ export default function ChecklistPanel({ taskId }) {
                     style={{
                       width: "18px", height: "18px", flexShrink: 0,
                       borderRadius: "5px",
-                      border: `2px solid ${item.is_done ? "#10B981" : "rgba(255,255,255,0.2)"}`,
-                      backgroundColor: item.is_done ? "#10B981" : "transparent",
+                      border: `2px solid ${item.is_done ? "#10B981" : "var(--color-border)"}`,
+                      backgroundColor: item.is_done ? "#10B981" : "var(--color-surface)",
                       cursor: "pointer",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       transition: "all 0.2s",

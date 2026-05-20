@@ -41,25 +41,39 @@ function AppContent() {
 
     const { data, error } = await supabase
       .from("profile_connections")
-      .select("id, created_at, requester:profiles!profile_connections_requester_id_fkey(id, username, full_name, avatar_url)")
+      .select("id, created_at, requester_id")
       .eq("addressee_id", user.id)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
     if (error) return;
 
+    const requesterIds = [...new Set((data || []).map((request) => request.requester_id))];
+    const { data: requesterProfiles } = requesterIds.length
+      ? await supabase
+          .from("profiles")
+          .select("id, username, full_name, avatar_url")
+          .in("id", requesterIds)
+      : { data: [] };
+
+    const requesterById = new Map((requesterProfiles || []).map((profile) => [profile.id, profile]));
+
     setNotifications((prev) => {
       const nonRequestNotifications = prev.filter((notification) => notification.type !== "profile_request");
-      const requestNotifications = (data || []).map((request) => ({
-        id: `profile-request-${request.id}`,
-        created_at: request.created_at,
-        title: "Profile request",
-        message: `${request.requester?.full_name || request.requester?.username || "Someone"} wants to add your profile.`,
-        type: "profile_request",
-        requestId: request.id,
-        requesterId: request.requester?.id,
-        targetPage: "profile",
-      }));
+      const requestNotifications = (data || []).map((request) => {
+        const requester = requesterById.get(request.requester_id);
+
+        return {
+          id: `profile-request-${request.id}`,
+          created_at: request.created_at,
+          title: "Profile request",
+          message: `${requester?.full_name || requester?.username || "Someone"} wants to add your profile.`,
+          type: "profile_request",
+          requestId: request.id,
+          requesterId: request.requester_id,
+          targetPage: "profile",
+        };
+      });
 
       return [...requestNotifications, ...nonRequestNotifications];
     });

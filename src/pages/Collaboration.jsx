@@ -178,14 +178,14 @@ export default function Collaboration({ selectedTaskId }) {
                       border: `1px solid ${isSelected ? "rgba(91,140,255,0.3)" : "var(--color-border)"}`,
                       backgroundColor: isSelected
                         ? "rgba(91,140,255,0.1)"
-                        : "rgba(17,24,39,0.5)",
+                        : "var(--color-surface)",
                       cursor: "pointer", transition: "all 0.2s",
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) e.currentTarget.style.backgroundColor = "var(--color-hover)";
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = "rgba(17,24,39,0.5)";
+                      if (!isSelected) e.currentTarget.style.backgroundColor = "var(--color-surface)";
                     }}
                   >
                     <p style={{

@@ -18,7 +18,10 @@ export default function Profile({ onNotify }) {
   const { user } = useAuth();
   const [profile, setProfile] = useState(initialProfile);
   const [friends, setFriends] = useState([]);
+  const [profileRequests, setProfileRequests] = useState([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [updatingRequestId, setUpdatingRequestId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -118,6 +121,83 @@ export default function Profile({ onNotify }) {
       isMounted = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchRequests = async () => {
+      if (!user) return;
+
+      setRequestsLoading(true);
+      const { data, error: requestsError } = await supabase
+        .from("profile_connections")
+        .select("id, requester_id, created_at")
+        .eq("addressee_id", user.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (!isMounted) return;
+
+      if (requestsError) {
+        setProfileRequests([]);
+        setRequestsLoading(false);
+        return;
+      }
+
+      const requesterIds = [...new Set((data || []).map((request) => request.requester_id))];
+      const { data: requesterProfiles } = requesterIds.length
+        ? await supabase
+            .from("profiles")
+            .select("id, username, full_name, avatar_url, bio")
+            .in("id", requesterIds)
+        : { data: [] };
+
+      if (!isMounted) return;
+
+      const requesterById = new Map((requesterProfiles || []).map((requester) => [requester.id, requester]));
+      setProfileRequests((data || []).map((request) => ({
+        ...request,
+        requester: requesterById.get(request.requester_id),
+      })));
+      setRequestsLoading(false);
+    };
+
+    fetchRequests();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const handleProfileRequest = async (requestId, nextStatus) => {
+    setUpdatingRequestId(requestId);
+
+    const { error: updateError } = await supabase
+      .from("profile_connections")
+      .update({ status: nextStatus, updated_at: new Date().toISOString() })
+      .eq("id", requestId);
+
+    if (updateError) {
+      setError(updateError.message);
+    } else {
+      const handledRequest = profileRequests.find((request) => request.id === requestId);
+      setProfileRequests((current) => current.filter((request) => request.id !== requestId));
+      if (nextStatus === "accepted" && handledRequest?.requester) {
+        setFriends((current) => {
+          if (current.some((friend) => friend.id === handledRequest.requester.id)) return current;
+          return [handledRequest.requester, ...current];
+        });
+      }
+      setStatus(nextStatus === "accepted" ? "Profile request accepted." : "Profile request ignored.");
+      onNotify?.({
+        title: nextStatus === "accepted" ? "Profile request accepted" : "Profile request ignored",
+        message: nextStatus === "accepted" ? "The profile was added to your friends." : "The request was dismissed.",
+        type: "profile",
+      });
+    }
+
+    setUpdatingRequestId(null);
+  };
 
   const handleChange = (field, value) => {
     setProfile((current) => ({ ...current, [field]: value }));
@@ -431,6 +511,55 @@ export default function Profile({ onNotify }) {
                 </button>
               </div>
             </div>
+          </section>
+
+          <section className="glass-card" style={{ padding: "1.25rem" }}>
+            <h3 style={{ margin: "0 0 1rem", fontFamily: "var(--font-heading)", fontSize: "1rem", color: "var(--color-foreground)" }}>
+              Profile Requests {profileRequests.length > 0 && `(${profileRequests.length})`}
+            </h3>
+            {requestsLoading ? (
+              <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+                Loading requests...
+              </p>
+            ) : profileRequests.length === 0 ? (
+              <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>
+                No pending profile requests.
+              </p>
+            ) : (
+              <div style={{ display: "grid", gap: "0.6rem" }}>
+                {profileRequests.map((request) => (
+                  <div key={request.id} style={{ display: "grid", gridTemplateColumns: "42px minmax(0, 1fr)", gap: "0.75rem", padding: "0.75rem", borderRadius: "10px", backgroundColor: "var(--color-subtle)", border: "1px solid var(--color-border)" }}>
+                    {renderAvatar(request.requester, 42, "1px solid var(--color-border)")}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ margin: 0, color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {request.requester?.full_name || request.requester?.username || "Unknown user"}
+                      </p>
+                      <p style={{ margin: "0.15rem 0 0", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.78rem" }}>
+                        @{request.requester?.username || "username"}
+                      </p>
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleProfileRequest(request.id, "accepted")}
+                          disabled={updatingRequestId === request.id}
+                          style={{ padding: "0.42rem 0.7rem", borderRadius: "8px", border: "none", backgroundColor: "rgba(16,185,129,0.15)", color: "#10B981", fontFamily: "var(--font-body)", fontSize: "0.78rem", fontWeight: 800, cursor: updatingRequestId === request.id ? "default" : "pointer" }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleProfileRequest(request.id, "ignored")}
+                          disabled={updatingRequestId === request.id}
+                          style={{ padding: "0.42rem 0.7rem", borderRadius: "8px", border: "1px solid var(--color-border)", backgroundColor: "transparent", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.78rem", fontWeight: 800, cursor: updatingRequestId === request.id ? "default" : "pointer" }}
+                        >
+                          Ignore
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="glass-card" style={{ padding: "1.25rem" }}>
