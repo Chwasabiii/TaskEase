@@ -19,20 +19,21 @@ export function useCollaboration() {
         task:tasks(*, profiles(id, full_name, avatar_url)),
         profile:profiles(id, full_name, avatar_url)
       `)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .neq("role", "owner");
     if (!error) setSharedTasks(data || []);
     setLoading(false);
   }, [user]);
 
   // Fetch collaborators for a specific task
-  const fetchCollaborators = async (taskId) => {
+  const fetchCollaborators = useCallback(async (taskId) => {
     const { data, error } = await supabase
       .from("collaborators")
       .select("*, profile:profiles(id, full_name, avatar_url)")
       .eq("task_id", taskId);
     if (!error) setCollaborators(data || []);
     return { data, error };
-  };
+  }, []);
 
   // Generate invite code from task id
   const generateInviteCode = (taskId) =>

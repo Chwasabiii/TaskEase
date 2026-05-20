@@ -11,6 +11,8 @@ export default function Navbar({
   onNotificationAction,
   setActivePage,
   onSendProfileRequest,
+  onProfileRequestResponse,
+  onRemoveProfileConnection,
 }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -18,6 +20,8 @@ export default function Navbar({
   const [profileResults, setProfileResults] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [selectedProfileFriends, setSelectedProfileFriends] = useState([]);
+  const [selectedProfileMutualFriends, setSelectedProfileMutualFriends] = useState([]);
+  const [selectedProfileStats, setSelectedProfileStats] = useState({ completedTasks: 0, focusSessions: 0, focusStreak: 0 });
   const [loadingSelectedProfile, setLoadingSelectedProfile] = useState(false);
   const [searchingProfiles, setSearchingProfiles] = useState(false);
   const [requestingProfileId, setRequestingProfileId] = useState(null);
@@ -72,26 +76,38 @@ export default function Navbar({
     let isMounted = true;
     const searchTimer = window.setTimeout(async () => {
       setSearchingProfiles(true);
-      const { data } = await supabase
+      let { data, error } = await supabase
         .from("profiles")
-        .select("id, username, full_name, avatar_url, bio")
+        .select("id, username, full_name, avatar_url, cover_url, bio, profile_status, location, role_title, school_work, interests, website_url, show_bio, show_friends, show_stats, is_discoverable, created_at")
         .neq("id", user.id)
         .or(`username.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`)
         .order("full_name", { ascending: true })
         .limit(6);
 
+      if (error) {
+        const fallback = await supabase
+          .from("profiles")
+          .select("id, username, full_name, avatar_url, bio")
+          .neq("id", user.id)
+          .or(`username.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`)
+          .order("full_name", { ascending: true })
+          .limit(6);
+        data = fallback.data;
+      }
+
       if (isMounted) {
-        const profiles = data || [];
+        const profiles = (data || []).filter((profile) => profile.is_discoverable !== false);
         const profilesWithStatus = await Promise.all(profiles.map(async (profile) => {
           const { data: connection } = await supabase
             .from("profile_connections")
-            .select("status, requester_id, addressee_id")
+            .select("id, status, requester_id, addressee_id")
             .or(`and(requester_id.eq.${user.id},addressee_id.eq.${profile.id}),and(requester_id.eq.${profile.id},addressee_id.eq.${user.id})`)
             .maybeSingle();
 
           return {
             ...profile,
             connectionStatus: connection?.status || null,
+            connectionId: connection?.id || null,
             requestSent: connection?.status === "pending" && connection?.requester_id === user.id,
             requestReceived: connection?.status === "pending" && connection?.addressee_id === user.id,
             isFriend: connection?.status === "accepted",
@@ -117,40 +133,138 @@ export default function Navbar({
 
   const handleSendRequest = async (profileId) => {
     setRequestingProfileId(profileId);
-    const { error } = await onSendProfileRequest?.(profileId);
+    const { data, error } = await onSendProfileRequest?.(profileId);
     if (!error) {
       setProfileResults((current) =>
         current.map((profile) =>
-          profile.id === profileId ? { ...profile, requestSent: true } : profile
+          profile.id === profileId
+            ? { ...profile, requestSent: true, connectionStatus: "pending", connectionId: data?.id || profile.connectionId }
+            : profile
         )
+      );
+      setSelectedProfile((current) =>
+        current?.id === profileId
+          ? { ...current, requestSent: true, connectionStatus: "pending", connectionId: data?.id || current.connectionId }
+          : current
       );
     }
     setRequestingProfileId(null);
   };
 
+  const handleAcceptRequest = async (profile) => {
+    if (!profile.connectionId) return;
+
+    setRequestingProfileId(profile.id);
+    const { error } = await onProfileRequestResponse?.(profile.connectionId, "accepted");
+    if (!error) {
+      setProfileResults((current) =>
+        current.map((item) =>
+          item.id === profile.id
+            ? { ...item, isFriend: true, requestReceived: false, requestSent: false, connectionStatus: "accepted" }
+            : item
+        )
+      );
+      setSelectedProfile((current) =>
+        current?.id === profile.id
+          ? { ...current, isFriend: true, requestReceived: false, requestSent: false, connectionStatus: "accepted" }
+          : current
+      );
+    }
+    setRequestingProfileId(null);
+  };
+
+  const handleRemoveConnection = async (profile) => {
+    if (!profile.connectionId) return;
+
+    setRequestingProfileId(profile.id);
+    const { error } = await onRemoveProfileConnection?.(profile.connectionId);
+    if (!error) {
+      setProfileResults((current) =>
+        current.map((item) =>
+          item.id === profile.id
+            ? { ...item, isFriend: false, requestReceived: false, requestSent: false, connectionStatus: null, connectionId: null }
+            : item
+        )
+      );
+      setSelectedProfile((current) =>
+        current?.id === profile.id
+          ? { ...current, isFriend: false, requestReceived: false, requestSent: false, connectionStatus: null, connectionId: null }
+          : current
+      );
+    }
+    setRequestingProfileId(null);
+  };
+
+  const getProfileActionLabel = (profile) => {
+    if (requestingProfileId === profile.id) return "Working...";
+    if (profile.isFriend) return "Unfriend";
+    if (profile.requestSent) return "Cancel";
+    if (profile.requestReceived) return "Accept";
+    return "Add";
+  };
+
+  const handleProfileAction = (profile) => {
+    if (profile.isFriend || profile.requestSent) {
+      handleRemoveConnection(profile);
+      return;
+    }
+    if (profile.requestReceived) {
+      handleAcceptRequest(profile);
+      return;
+    }
+    handleSendRequest(profile.id);
+  };
+
   const openProfilePreview = async (profile) => {
     setSelectedProfile(profile);
     setSelectedProfileFriends([]);
+    setSelectedProfileMutualFriends([]);
+    setSelectedProfileStats({ completedTasks: 0, focusSessions: 0, focusStreak: 0 });
     setLoadingSelectedProfile(true);
-    setSearchOpen(true);
 
-    const { data } = await supabase
-      .from("profile_connections")
-      .select(`
-        id,
-        requester_id,
-        addressee_id,
-        requester:profiles!profile_connections_requester_id_fkey(id, username, full_name, avatar_url, bio),
-        addressee:profiles!profile_connections_addressee_id_fkey(id, username, full_name, avatar_url, bio)
-      `)
-      .eq("status", "accepted")
-      .or(`requester_id.eq.${profile.id},addressee_id.eq.${profile.id}`)
-      .order("updated_at", { ascending: false })
-      .limit(12);
+    let { data: fullProfile } = await supabase
+      .from("profiles")
+      .select("id, username, full_name, avatar_url, cover_url, bio, profile_status, location, role_title, school_work, interests, website_url, show_bio, show_friends, show_stats, is_discoverable, created_at")
+      .eq("id", profile.id)
+      .single();
 
-    setSelectedProfileFriends((data || []).map((connection) =>
-      connection.requester_id === profile.id ? connection.addressee : connection.requester
-    ).filter(Boolean));
+    fullProfile = { ...profile, ...(fullProfile || {}) };
+    setSelectedProfile(fullProfile);
+
+    const [{ data: targetConnections }, { data: myConnections }] = await Promise.all([
+      supabase.from("profile_connections").select("id, requester_id, addressee_id").eq("status", "accepted").or(`requester_id.eq.${profile.id},addressee_id.eq.${profile.id}`),
+      supabase.from("profile_connections").select("requester_id, addressee_id").eq("status", "accepted").or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+    ]);
+
+    const targetFriendIds = [...new Set((targetConnections || []).map((connection) =>
+      connection.requester_id === profile.id ? connection.addressee_id : connection.requester_id
+    ))];
+    const myFriendIds = new Set((myConnections || []).map((connection) =>
+      connection.requester_id === user.id ? connection.addressee_id : connection.requester_id
+    ));
+    const mutualIds = targetFriendIds.filter((id) => myFriendIds.has(id));
+
+    const { data: friendProfiles } = targetFriendIds.length
+      ? await supabase.from("profiles").select("id, username, full_name, avatar_url, bio").in("id", targetFriendIds)
+      : { data: [] };
+
+    const friends = (friendProfiles || []).map((friend) => ({
+      ...friend,
+      connectionId: (targetConnections || []).find((connection) => connection.requester_id === friend.id || connection.addressee_id === friend.id)?.id,
+    }));
+
+    setSelectedProfileFriends(fullProfile.show_friends === false ? [] : friends);
+    setSelectedProfileMutualFriends(friends.filter((friend) => mutualIds.includes(friend.id)));
+
+    if (fullProfile.show_stats !== false) {
+      const [{ count: completedTasks }, { count: focusSessions }, { data: sessionDates }] = await Promise.all([
+        supabase.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", profile.id).eq("status", "done"),
+        supabase.from("pomodoro_sessions").select("id", { count: "exact", head: true }).eq("user_id", profile.id).eq("completed", true),
+        supabase.from("pomodoro_sessions").select("started_at").eq("user_id", profile.id).eq("completed", true).order("started_at", { ascending: false }),
+      ]);
+      setSelectedProfileStats({ completedTasks: completedTasks || 0, focusSessions: focusSessions || 0, focusStreak: calculateFocusStreak(sessionDates || []) });
+    }
+
     setLoadingSelectedProfile(false);
   };
 
@@ -158,6 +272,7 @@ export default function Navbar({
     (profile?.full_name || profile?.username || "U")[0]?.toUpperCase();
 
   return (
+    <>
     <header
       style={{
         height: "64px",
@@ -297,21 +412,21 @@ export default function Navbar({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleSendRequest(profile.id)}
-                        disabled={requestingProfileId === profile.id || profile.requestSent || profile.requestReceived || profile.isFriend}
+                        onClick={() => handleProfileAction(profile)}
+                        disabled={requestingProfileId === profile.id}
                         style={{
                           padding: "0.45rem 0.75rem",
                           borderRadius: "9px",
                           border: "none",
-                          backgroundColor: profile.isFriend || profile.requestSent ? "rgba(16,185,129,0.14)" : "var(--color-primary-soft)",
-                          color: profile.isFriend || profile.requestSent ? "#10B981" : "var(--color-primary)",
+                          backgroundColor: profile.isFriend || profile.requestSent ? "rgba(239,68,68,0.12)" : profile.requestReceived ? "rgba(16,185,129,0.14)" : "var(--color-primary-soft)",
+                          color: profile.isFriend || profile.requestSent ? "#EF4444" : profile.requestReceived ? "#10B981" : "var(--color-primary)",
                           fontFamily: "var(--font-body)",
                           fontSize: "0.78rem",
                           fontWeight: 800,
-                          cursor: requestingProfileId === profile.id || profile.requestSent || profile.requestReceived || profile.isFriend ? "default" : "pointer",
+                          cursor: requestingProfileId === profile.id ? "default" : "pointer",
                         }}
                       >
-                        {profile.isFriend ? "Friends" : profile.requestSent ? "Sent" : profile.requestReceived ? "Pending" : requestingProfileId === profile.id ? "Adding..." : "Add"}
+                        {getProfileActionLabel(profile)}
                       </button>
                     </div>
                   ))}
@@ -341,6 +456,26 @@ export default function Navbar({
                     {selectedProfile.bio || "This profile has not added a bio yet."}
                   </p>
                   <div style={{ marginTop: "0.75rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => handleProfileAction(selectedProfile)}
+                      disabled={requestingProfileId === selectedProfile.id}
+                      style={{
+                        width: "100%",
+                        marginBottom: "0.75rem",
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "10px",
+                        border: "none",
+                        backgroundColor: selectedProfile.isFriend || selectedProfile.requestSent ? "rgba(239,68,68,0.12)" : selectedProfile.requestReceived ? "rgba(16,185,129,0.14)" : "var(--color-primary-soft)",
+                        color: selectedProfile.isFriend || selectedProfile.requestSent ? "#EF4444" : selectedProfile.requestReceived ? "#10B981" : "var(--color-primary)",
+                        fontFamily: "var(--font-body)",
+                        fontSize: "0.82rem",
+                        fontWeight: 800,
+                        cursor: requestingProfileId === selectedProfile.id ? "default" : "pointer",
+                      }}
+                    >
+                      {getProfileActionLabel(selectedProfile)}
+                    </button>
                     <p style={{ margin: "0 0 0.45rem", color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 800 }}>
                       Friends
                     </p>
@@ -632,5 +767,152 @@ export default function Navbar({
         </button>
       </div>
     </header>
+    {selectedProfile && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 80,
+          backgroundColor: "var(--color-backdrop)",
+          display: "grid",
+          placeItems: "center",
+          padding: "1.5rem",
+        }}
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setSelectedProfile(null);
+        }}
+      >
+        <div className="glass-card" style={{ width: "min(840px, 100%)", maxHeight: "88vh", overflowY: "auto", padding: 0, borderRadius: "16px" }}>
+          <div style={{ height: "190px", borderRadius: "16px 16px 0 0", background: selectedProfile.cover_url ? `linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.5)), url(${selectedProfile.cover_url}) center/cover` : "linear-gradient(135deg, rgba(16,185,129,0.78), rgba(91,140,255,0.9))" }} />
+          <div style={{ padding: "0 1.5rem 1.5rem", marginTop: "-42px" }}>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: "1rem", minWidth: 0 }}>
+                {selectedProfile.avatar_url ? (
+                  <img src={selectedProfile.avatar_url} alt="" style={{ width: "92px", height: "92px", borderRadius: "50%", objectFit: "cover", border: "5px solid var(--color-surface-strong)" }} />
+                ) : (
+                  <div style={{ width: "92px", height: "92px", borderRadius: "50%", display: "grid", placeItems: "center", background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)", color: "white", fontFamily: "var(--font-heading)", fontSize: "1.8rem", fontWeight: 800, border: "5px solid var(--color-surface-strong)" }}>
+                    {getInitial(selectedProfile)}
+                  </div>
+                )}
+                <div style={{ minWidth: 0, paddingBottom: "0.4rem" }}>
+                  <h2 style={{ margin: 0, color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "1.45rem", fontWeight: 800, overflowWrap: "anywhere" }}>
+                    {selectedProfile.full_name || "Unnamed User"}
+                  </h2>
+                  <p style={{ margin: "0.2rem 0 0", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
+                    @{selectedProfile.username || "username"} - {selectedProfile.profile_status || "Available"}
+                  </p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setSelectedProfile(null)} style={{ border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)", color: "var(--color-muted)", borderRadius: "10px", padding: "0.55rem 0.75rem", fontFamily: "var(--font-body)", fontWeight: 800, cursor: "pointer" }}>
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "1rem" }}>
+              <button type="button" onClick={() => handleProfileAction(selectedProfile)} disabled={requestingProfileId === selectedProfile.id} style={{ padding: "0.65rem 0.85rem", borderRadius: "10px", border: "none", backgroundColor: selectedProfile.isFriend || selectedProfile.requestSent ? "rgba(239,68,68,0.12)" : selectedProfile.requestReceived ? "rgba(16,185,129,0.14)" : "var(--color-primary-soft)", color: selectedProfile.isFriend || selectedProfile.requestSent ? "#EF4444" : selectedProfile.requestReceived ? "#10B981" : "var(--color-primary)", fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 800, cursor: requestingProfileId === selectedProfile.id ? "default" : "pointer" }}>
+                {getProfileActionLabel(selectedProfile)}
+              </button>
+              <button type="button" onClick={() => window.alert("Messaging is not built yet.")} style={{ padding: "0.65rem 0.85rem", borderRadius: "10px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)", color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}>
+                Message
+              </button>
+              <button type="button" onClick={() => { setActivePage?.("collaboration"); setSelectedProfile(null); }} style={{ padding: "0.65rem 0.85rem", borderRadius: "10px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)", color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}>
+                Invite to Task
+              </button>
+            </div>
+
+            {loadingSelectedProfile ? (
+              <p style={{ margin: "1rem 0 0", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>Loading profile...</p>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 260px", gap: "1rem", marginTop: "1rem" }}>
+                <div style={{ display: "grid", gap: "1rem" }}>
+                  <section style={{ padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)" }}>
+                    <h3 style={{ margin: "0 0 0.65rem", color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "1rem" }}>About</h3>
+                    {selectedProfile.show_bio === false ? (
+                      <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>This profile keeps about details private.</p>
+                    ) : (
+                      <div style={{ display: "grid", gap: "0.55rem" }}>
+                        {[selectedProfile.bio, selectedProfile.role_title, selectedProfile.location, selectedProfile.school_work, selectedProfile.interests, selectedProfile.website_url].filter(Boolean).map((item) => (
+                          <p key={item} style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.88rem", lineHeight: 1.45, overflowWrap: "anywhere" }}>{item}</p>
+                        ))}
+                        {![selectedProfile.bio, selectedProfile.role_title, selectedProfile.location, selectedProfile.school_work, selectedProfile.interests, selectedProfile.website_url].some(Boolean) && (
+                          <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>No about details yet.</p>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                  <section style={{ padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)" }}>
+                    <h3 style={{ margin: "0 0 0.65rem", color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "1rem" }}>Friends</h3>
+                    {selectedProfile.show_friends === false ? (
+                      <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>Friends list is private.</p>
+                    ) : selectedProfileFriends.length === 0 ? (
+                      <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>No friends to show.</p>
+                    ) : (
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {selectedProfileFriends.slice(0, 12).map((friend) => (
+                          <span key={friend.id} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", maxWidth: "190px", padding: "0.35rem 0.5rem", borderRadius: "999px", backgroundColor: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+                            <span style={{ width: "22px", height: "22px", borderRadius: "50%", display: "grid", placeItems: "center", background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)", color: "white", fontFamily: "var(--font-body)", fontSize: "0.65rem", fontWeight: 800, flexShrink: 0 }}>{getInitial(friend)}</span>
+                            <span style={{ color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.75rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{friend.full_name || friend.username || "User"}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </div>
+
+                <aside style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+                  <section style={{ padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)" }}>
+                    <h3 style={{ margin: "0 0 0.65rem", color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "1rem" }}>Stats</h3>
+                    {selectedProfile.show_stats === false ? (
+                      <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>Stats are private.</p>
+                    ) : (
+                      <div style={{ display: "grid", gap: "0.55rem" }}>
+                        {[["Friends", selectedProfileFriends.length], ["Completed tasks", selectedProfileStats.completedTasks], ["Focus sessions", selectedProfileStats.focusSessions], ["Focus streak", `${selectedProfileStats.focusStreak} day${selectedProfileStats.focusStreak === 1 ? "" : "s"}`], ["Joined", selectedProfile.created_at ? new Date(selectedProfile.created_at).toLocaleDateString() : "Unknown"]].map(([label, value]) => (
+                          <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: "1rem", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.82rem" }}>
+                            <span>{label}</span><strong style={{ color: "var(--color-foreground)" }}>{value}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                  <section style={{ padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)" }}>
+                    <h3 style={{ margin: "0 0 0.65rem", color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "1rem" }}>Mutual Friends</h3>
+                    {selectedProfileMutualFriends.length === 0 ? (
+                      <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>No mutual friends.</p>
+                    ) : (
+                      <div style={{ display: "grid", gap: "0.45rem" }}>
+                        {selectedProfileMutualFriends.slice(0, 6).map((friend) => (
+                          <p key={friend.id} style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{friend.full_name || friend.username}</p>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </aside>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
+}
+
+function calculateFocusStreak(rows) {
+  const days = new Set(
+    rows
+      .map((row) => row.started_at)
+      .filter(Boolean)
+      .map((date) => new Date(date).toDateString())
+  );
+  let streak = 0;
+  const cursor = new Date();
+
+  while (days.has(cursor.toDateString())) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCollaboration } from "../hooks/useCollaboration";
 import { useTasks } from "../hooks/useTasks";
@@ -59,9 +59,32 @@ export default function Collaboration({ selectedTaskId }) {
     setInviting(false);
   };
 
-  const myTasks    = tasks.slice(0, 20);
-  const sharedList = sharedTasks.map((s) => s.task).filter(Boolean);
+  const myTasks    = useMemo(() => tasks.slice(0, 20), [tasks]);
+  const sharedList = useMemo(
+    () => sharedTasks.map((s) => s.task).filter(Boolean),
+    [sharedTasks]
+  );
   const displayTasks = activeTab === "mine" ? myTasks : sharedList;
+  const isTaskLeader = Boolean(selectedTask && user?.id === selectedTask.user_id);
+  const leaderProfile = selectedTask?.profiles || {
+    id: selectedTask?.user_id,
+    full_name: isTaskLeader
+      ? user?.user_metadata?.full_name || user?.email?.split("@")[0] || "You"
+      : "Task creator",
+    avatar_url: null,
+  };
+  const teamMembers = selectedTask
+    ? [
+        {
+          id: `leader-${selectedTask.id}`,
+          task_id: selectedTask.id,
+          user_id: selectedTask.user_id,
+          role: "owner",
+          profile: leaderProfile,
+        },
+        ...collaborators.filter((member) => member.user_id !== selectedTask.user_id),
+      ]
+    : [];
 
   const syncSelectedTask = useCallback(async () => {
     if (!selectedTaskId) return;
@@ -256,37 +279,49 @@ export default function Collaboration({ selectedTaskId }) {
                       {selectedTask.title}
                     </h3>
                     <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-muted)" }}>
-                      Invite code:{" "}
-                      <span style={{
-                        fontFamily: "var(--font-mono)", color: "#5B8CFF",
-                        fontWeight: 700, letterSpacing: "0.1em",
-                      }}>
-                        {generateInviteCode(selectedTask.id)}
+                      Team leader:{" "}
+                      <span style={{ color: "#5B8CFF", fontWeight: 700 }}>
+                        {leaderProfile?.full_name || "Task creator"}
                       </span>
+                      {isTaskLeader && (
+                        <>
+                          {" "}- Invite code:{" "}
+                          <span style={{
+                            fontFamily: "var(--font-mono)", color: "#5B8CFF",
+                            fontWeight: 700, letterSpacing: "0.1em",
+                          }}>
+                            {generateInviteCode(selectedTask.id)}
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
-                  <button
-                    onClick={() => setShowInvite(true)}
-                    style={{
-                      padding: "0.5rem 1rem", borderRadius: "10px", border: "none",
-                      background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
-                      color: "white", fontFamily: "var(--font-body)",
-                      fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
-                    }}
-                  >
-                    Share Invite Code
-                  </button>
+                  {isTaskLeader && (
+                    <button
+                      onClick={() => setShowInvite(true)}
+                      style={{
+                        padding: "0.5rem 1rem", borderRadius: "10px", border: "none",
+                        background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+                        color: "white", fontFamily: "var(--font-body)",
+                        fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
+                      }}
+                    >
+                      Share Invite Code
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Collaborators */}
+              {/* Task team */}
               <div className="glass-card" style={{ padding: "1.25rem" }}>
                 <h4 style={{
                   fontFamily: "var(--font-heading)", fontSize: "0.95rem",
                   fontWeight: 600, color: "var(--color-muted)", marginBottom: "1rem",
                 }}>
-                  👥 Collaborators {collaborators.length > 0 && `(${collaborators.length})`}
+                  Task Team {teamMembers.length > 0 && `(${teamMembers.length})`}
                 </h4>
+                {isTaskLeader && (
+                  <>
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 120px auto", gap: "0.5rem", marginBottom: "1rem" }}>
                   <input
                     type="email"
@@ -355,18 +390,15 @@ export default function Collaboration({ selectedTaskId }) {
                     {inviteStatus}
                   </p>
                 )}
-                {collaborators.length === 0 ? (
-                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "var(--color-muted)" }}>
-                    No collaborators yet — share the invite code!
-                  </p>
-                ) : (
-                  <CollaboratorList
-                    collaborators={collaborators}
-                    currentUserId={user.id}
-                    onUpdateRole={updateRole}
-                    onRemove={removeCollaborator}
-                  />
+                  </>
                 )}
+                <CollaboratorList
+                  collaborators={teamMembers}
+                  currentUserId={user.id}
+                  canManageRoles={isTaskLeader}
+                  onUpdateRole={updateRole}
+                  onRemove={removeCollaborator}
+                />
               </div>
 
               {/* Comments */}

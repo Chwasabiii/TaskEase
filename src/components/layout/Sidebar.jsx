@@ -26,14 +26,22 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
         overflowX: "hidden",
       }}
     >
-      <div
+      <button
+        onClick={() => setActivePage("dashboard")}
         style={{
           padding: "1.5rem 1.25rem",
           display: "flex",
           alignItems: "center",
           gap: "0.75rem",
           borderBottom: "1px solid var(--color-border)",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          transition: "opacity var(--motion-fast)",
         }}
+        onMouseEnter={(e) => e.currentTarget.style.opacity = "0.8"}
+        onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+        aria-label="Go to dashboard"
       >
         <div
           className="interactive-pop"
@@ -70,7 +78,7 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
             TaskEase
           </span>
         )}
-      </div>
+      </button>
 
       <nav style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "4px" }}>
         {navItems.map((item) => {

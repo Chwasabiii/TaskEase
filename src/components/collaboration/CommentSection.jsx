@@ -4,15 +4,15 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function CommentSection({ taskId }) {
   const { user } = useAuth();
-  const { comments, loading, addComment, deleteComment } = useComments(taskId);
+  const { comments, loading, error, addComment, deleteComment } = useComments(taskId);
   const [text, setText]         = useState("");
   const [sending, setSending]   = useState(false);
 
   const handleSend = async () => {
     if (!text.trim()) return;
     setSending(true);
-    await addComment(text.trim());
-    setText("");
+    const { error } = await addComment(text.trim());
+    if (!error) setText("");
     setSending(false);
   };
 
@@ -33,6 +33,21 @@ export default function CommentSection({ taskId }) {
       }}>
         💬 Comments {comments.length > 0 && `(${comments.length})`}
       </h4>
+
+      {error && (
+        <p style={{
+          margin: 0,
+          padding: "0.6rem 0.75rem",
+          borderRadius: "8px",
+          border: "1px solid rgba(239,68,68,0.25)",
+          backgroundColor: "rgba(239,68,68,0.08)",
+          color: "#EF4444",
+          fontFamily: "var(--font-body)",
+          fontSize: "0.82rem",
+        }}>
+          {error}
+        </p>
+      )}
 
       {/* Comment list */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxHeight: "300px", overflowY: "auto" }}>

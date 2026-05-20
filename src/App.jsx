@@ -91,14 +91,16 @@ function AppContent() {
       return { error: { message: "You must be signed in to add profiles." } };
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("profile_connections")
       .insert({
         requester_id: user.id,
         addressee_id: profileId,
         status: "pending",
         updated_at: new Date().toISOString(),
-      });
+      })
+      .select("id")
+      .single();
 
     if (!error) {
       addNotification({
@@ -108,7 +110,7 @@ function AppContent() {
       });
     }
 
-    return { error };
+    return { data, error };
   };
 
   const handleProfileRequestResponse = async (requestId, status) => {
@@ -124,6 +126,31 @@ function AppContent() {
       addNotification({
         title: status === "accepted" ? "Profile request accepted" : "Profile request ignored",
         message: status === "accepted" ? "The profile was added." : "The request was dismissed.",
+        type: "profile",
+      });
+      await loadProfileRequests();
+    }
+
+    return { error };
+  };
+
+  const handleRemoveProfileConnection = async (connectionId) => {
+    if (!connectionId) {
+      return { error: { message: "Missing profile connection." } };
+    }
+
+    const { error } = await supabase
+      .from("profile_connections")
+      .delete()
+      .eq("id", connectionId);
+
+    if (!error) {
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== `profile-request-${connectionId}`)
+      );
+      addNotification({
+        title: "Profile connection updated",
+        message: "The profile connection was removed.",
         type: "profile",
       });
       await loadProfileRequests();
@@ -207,6 +234,8 @@ function AppContent() {
         onClearNotifications={clearNotifications}
         onNotificationAction={handleNotificationAction}
         onSendProfileRequest={handleSendProfileRequest}
+        onProfileRequestResponse={handleProfileRequestResponse}
+        onRemoveProfileConnection={handleRemoveProfileConnection}
         onNotify={addNotification}
       >
         <Suspense fallback={null}>{renderPage()}</Suspense>

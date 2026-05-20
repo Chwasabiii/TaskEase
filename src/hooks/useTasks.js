@@ -34,7 +34,7 @@ export function useTasks() {
     setLoading(true);
     const { data, error } = await supabase
       .from("tasks")
-      .select("*")
+      .select("*, profiles(id, full_name, avatar_url)")
       .eq("user_id", user.id)
       .eq("is_archived", false)
       .order("created_at", { ascending: false });
@@ -61,7 +61,7 @@ export function useTasks() {
     const { data, error } = await supabase
       .from("tasks")
       .insert([{ ...taskData, user_id: user.id }])
-      .select("*")
+      .select("*, profiles(id, full_name, avatar_url)")
       .single();
     if (!error) setTasks((prev) => [{ ...data, subtasks: [] }, ...prev]);
     return { data, error };
@@ -73,7 +73,7 @@ export function useTasks() {
       .from("tasks")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select("*")
+      .select("*, profiles(id, full_name, avatar_url)")
       .single();
     if (!error) {
       setTasks((prev) =>

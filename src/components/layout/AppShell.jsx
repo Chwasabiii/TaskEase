@@ -13,6 +13,8 @@ export default function AppShell({
   onClearNotifications,
   onNotificationAction,
   onSendProfileRequest,
+  onProfileRequestResponse,
+  onRemoveProfileConnection,
   onNotify,
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -47,6 +49,8 @@ export default function AppShell({
           onClearNotifications={onClearNotifications}
           onNotificationAction={onNotificationAction}
           onSendProfileRequest={onSendProfileRequest}
+          onProfileRequestResponse={onProfileRequestResponse}
+          onRemoveProfileConnection={onRemoveProfileConnection}
         />
         <main
           style={{

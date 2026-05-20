@@ -4,7 +4,13 @@ const ROLE_COLORS = {
   viewer: { color: "var(--color-muted)", bg: "rgba(100,116,139,0.1)" },
 };
 
-export default function CollaboratorList({ collaborators, currentUserId, onUpdateRole, onRemove }) {
+export default function CollaboratorList({
+  collaborators,
+  currentUserId,
+  canManageRoles = false,
+  onUpdateRole,
+  onRemove,
+}) {
   const getInitial = (profile) =>
     profile?.full_name?.[0]?.toUpperCase() ?? "?";
 
@@ -14,6 +20,7 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
         const role    = ROLE_COLORS[c.role] || ROLE_COLORS.viewer;
         const isOwner = c.role === "owner";
         const isSelf  = c.user_id === currentUserId;
+        const canEditMember = canManageRoles && !isOwner && !isSelf;
 
         return (
           <div
@@ -53,27 +60,26 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
             </div>
 
             {/* Role badge / selector */}
-            {isOwner ? (
+            {isOwner || !canEditMember ? (
               <span style={{
                 padding: "2px 10px", borderRadius: "20px",
                 fontSize: "0.75rem", fontWeight: 600,
                 fontFamily: "var(--font-body)",
                 backgroundColor: role.bg, color: role.color,
               }}>
-                owner
+                {isOwner ? "leader" : c.role}
               </span>
             ) : (
               <select
                 value={c.role}
                 onChange={(e) => onUpdateRole(c.id, e.target.value)}
-                disabled={isSelf}
                 style={{
                   padding: "3px 8px", borderRadius: "8px",
                   border: `1px solid ${role.color}33`,
                   backgroundColor: role.bg,
                   color: role.color,
                   fontFamily: "var(--font-body)", fontSize: "0.75rem",
-                  fontWeight: 600, cursor: isSelf ? "default" : "pointer",
+                  fontWeight: 600, cursor: "pointer",
                   outline: "none",
                 }}
               >
@@ -83,7 +89,7 @@ export default function CollaboratorList({ collaborators, currentUserId, onUpdat
             )}
 
             {/* Remove */}
-            {!isOwner && !isSelf && (
+            {canEditMember && (
               <button
                 onClick={() => onRemove(c.id)}
                 style={{
