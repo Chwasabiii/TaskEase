@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { AuthShell, RegisterForm } from "../components/auth";
 
 export default function Register({ onSwitchToLogin }) {
-  const { signUp } = useAuth();
+  const { signUp, resendConfirmation } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +27,23 @@ export default function Register({ onSwitchToLogin }) {
     setLoading(false);
   };
 
+  const handleResendConfirmation = async () => {
+    if (!email.trim()) {
+      setError("Enter your email first.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    const { error } = await resendConfirmation(email);
+    if (error) {
+      setError(error.message);
+    } else {
+      setSuccess("Confirmation email sent. Check your inbox before signing in.");
+    }
+    setLoading(false);
+  };
+
   return (
     <AuthShell title="Create account" subtitle="Start managing tasks with TaskEase">
       <RegisterForm
@@ -40,6 +57,7 @@ export default function Register({ onSwitchToLogin }) {
         loading={loading}
         error={error}
         success={success}
+        onResendConfirmation={handleResendConfirmation}
         onSwitchToLogin={onSwitchToLogin}
       />
     </AuthShell>

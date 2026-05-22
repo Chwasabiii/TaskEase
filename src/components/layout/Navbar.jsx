@@ -69,7 +69,7 @@ export default function Navbar({
     const searchTerm = profileQuery.trim().replace(/[%_,()]/g, "");
 
     if (!searchOpen || searchTerm.length < 2) {
-      setProfileResults([]);
+      window.setTimeout(() => setProfileResults([]), 0);
       return undefined;
     }
 
@@ -133,7 +133,9 @@ export default function Navbar({
 
   const handleSendRequest = async (profileId) => {
     setRequestingProfileId(profileId);
-    const { data, error } = await onSendProfileRequest?.(profileId);
+    const { data, error } = onSendProfileRequest
+      ? await onSendProfileRequest(profileId)
+      : { data: null, error: "Missing handler" };
     if (!error) {
       setProfileResults((current) =>
         current.map((profile) =>
@@ -155,7 +157,9 @@ export default function Navbar({
     if (!profile.connectionId) return;
 
     setRequestingProfileId(profile.id);
-    const { error } = await onProfileRequestResponse?.(profile.connectionId, "accepted");
+    const { error } = onProfileRequestResponse
+      ? await onProfileRequestResponse(profile.connectionId, "accepted")
+      : { error: "Missing handler" };
     if (!error) {
       setProfileResults((current) =>
         current.map((item) =>
@@ -177,7 +181,9 @@ export default function Navbar({
     if (!profile.connectionId) return;
 
     setRequestingProfileId(profile.id);
-    const { error } = await onRemoveProfileConnection?.(profile.connectionId);
+    const { error } = onRemoveProfileConnection
+      ? await onRemoveProfileConnection(profile.connectionId)
+      : { error: "Missing handler" };
     if (!error) {
       setProfileResults((current) =>
         current.map((item) =>

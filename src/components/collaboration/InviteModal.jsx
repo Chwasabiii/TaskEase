@@ -1,6 +1,15 @@
 import { useState } from "react";
 
-export default function InviteModal({ task, inviteCode, onJoinByCode, onClose }) {
+export default function InviteModal({
+  task,
+  inviteCode,
+  expiresAt,
+  loading: inviteLoading = false,
+  error: inviteError = "",
+  onCreateInvite,
+  onJoinByCode,
+  onClose,
+}) {
   const [code, setCode]       = useState("");
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
@@ -9,10 +18,20 @@ export default function InviteModal({ task, inviteCode, onJoinByCode, onClose })
   const [tab, setTab]         = useState("share"); // "share" | "join"
 
   const handleCopy = () => {
+    if (!inviteCode) return;
     navigator.clipboard.writeText(inviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const formatExpiry = (date) => date
+    ? new Date(date).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "";
 
   const handleJoin = async () => {
     if (!code.trim()) return setError("Please enter an invite code.");
@@ -86,8 +105,18 @@ export default function InviteModal({ task, inviteCode, onJoinByCode, onClose })
         {tab === "share" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <p style={{ fontFamily: "var(--font-body)", fontSize: "0.875rem", color: "var(--color-muted)" }}>
-              Share this invite code with teammates to let them join:
+              Share this secure invite code with teammates to let them join:
             </p>
+            {inviteError && (
+              <div style={{
+                backgroundColor: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.3)",
+                borderRadius: "10px", padding: "0.75rem 1rem",
+                color: "#EF4444", fontFamily: "var(--font-body)", fontSize: "0.85rem",
+              }}>
+                {inviteError}
+              </div>
+            )}
             <div style={{
               display: "flex", alignItems: "center", gap: "0.5rem",
               padding: "0.875rem 1rem",
@@ -101,22 +130,48 @@ export default function InviteModal({ task, inviteCode, onJoinByCode, onClose })
                 fontWeight: 700, color: "#5B8CFF",
                 letterSpacing: "0.15em",
               }}>
-                {inviteCode}
+                {inviteLoading ? "CREATING..." : inviteCode || "NO CODE"}
               </span>
               <button
                 onClick={handleCopy}
+                disabled={!inviteCode || inviteLoading}
                 style={{
                   padding: "0.4rem 0.875rem", borderRadius: "8px",
                   border: "1px solid rgba(91,140,255,0.3)",
                   backgroundColor: copied ? "rgba(16,185,129,0.15)" : "rgba(91,140,255,0.15)",
                   color: copied ? "#10B981" : "#5B8CFF",
                   fontFamily: "var(--font-body)", fontSize: "0.8rem",
-                  fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
+                  fontWeight: 500,
+                  cursor: !inviteCode || inviteLoading ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
                 }}
               >
                 {copied ? "✓ Copied!" : "Copy"}
               </button>
             </div>
+            {expiresAt && (
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-muted)" }}>
+                Expires: <span style={{ color: "var(--color-muted)" }}>{formatExpiry(expiresAt)}</span>
+              </p>
+            )}
+            {onCreateInvite && (
+              <button
+                onClick={onCreateInvite}
+                disabled={inviteLoading}
+                style={{
+                  padding: "0.6rem 1rem",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(91,140,255,0.3)",
+                  backgroundColor: "rgba(91,140,255,0.1)",
+                  color: "#5B8CFF",
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 600,
+                  cursor: inviteLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {inviteLoading ? "Generating..." : "Generate New Code"}
+              </button>
+            )}
             {task && (
               <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-muted)" }}>
                 Task: <span style={{ color: "var(--color-muted)" }}>{task.title}</span>

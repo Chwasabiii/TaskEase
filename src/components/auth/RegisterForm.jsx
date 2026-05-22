@@ -11,6 +11,7 @@ export default function RegisterForm({
   loading,
   error,
   success,
+  onResendConfirmation,
   onSwitchToLogin,
 }) {
   return (
@@ -57,6 +58,23 @@ export default function RegisterForm({
       >
         {loading ? "Creating account..." : "Create account"}
       </Button>
+      {success && onResendConfirmation && (
+        <button
+          type="button"
+          onClick={onResendConfirmation}
+          disabled={loading}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--color-primary)",
+            cursor: loading ? "not-allowed" : "pointer",
+            fontFamily: "var(--font-body)",
+            fontWeight: 700,
+          }}
+        >
+          Resend confirmation email
+        </button>
+      )}
       <div style={{ textAlign: "center", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
         Already have an account?{' '}
         <button type="button" onClick={onSwitchToLogin} style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontWeight: 700 }}>

@@ -14,7 +14,7 @@ export default function Collaboration({ selectedTaskId }) {
   const { tasks } = useTasks();
   const {
     sharedTasks, collaborators,
-    fetchCollaborators, generateInviteCode,
+    fetchCollaborators, createInviteCode,
     inviteByEmail, joinByCode, updateRole, removeCollaborator,
   } = useCollaboration();
 
@@ -27,6 +27,9 @@ export default function Collaboration({ selectedTaskId }) {
   const [inviteError, setInviteError]   = useState("");
   const [inviteStatus, setInviteStatus] = useState("");
   const [inviting, setInviting]         = useState(false);
+  const [taskInvite, setTaskInvite]     = useState(null);
+  const [taskInviteError, setTaskInviteError] = useState("");
+  const [creatingInvite, setCreatingInvite] = useState(false);
   const detailRef = useRef(null);
 
   const handleSelectTask = useCallback(async (task) => {
@@ -57,6 +60,24 @@ export default function Collaboration({ selectedTaskId }) {
     }
 
     setInviting(false);
+  };
+
+  const handleOpenInvite = async () => {
+    if (!selectedTask) return;
+
+    setTaskInvite(null);
+    setTaskInviteError("");
+    setCreatingInvite(true);
+    setShowInvite(true);
+
+    const { data, error } = await createInviteCode(selectedTask.id);
+    if (error) {
+      setTaskInviteError(error.message || "Could not create invite code.");
+    } else {
+      setTaskInvite(data);
+    }
+
+    setCreatingInvite(false);
   };
 
   const myTasks    = useMemo(() => tasks.slice(0, 20), [tasks]);
@@ -283,22 +304,12 @@ export default function Collaboration({ selectedTaskId }) {
                       <span style={{ color: "#5B8CFF", fontWeight: 700 }}>
                         {leaderProfile?.full_name || "Task creator"}
                       </span>
-                      {isTaskLeader && (
-                        <>
-                          {" "}- Invite code:{" "}
-                          <span style={{
-                            fontFamily: "var(--font-mono)", color: "#5B8CFF",
-                            fontWeight: 700, letterSpacing: "0.1em",
-                          }}>
-                            {generateInviteCode(selectedTask.id)}
-                          </span>
-                        </>
-                      )}
+                      {isTaskLeader && " - secure invite codes are generated when shared"}
                     </p>
                   </div>
                   {isTaskLeader && (
                     <button
-                      onClick={() => setShowInvite(true)}
+                      onClick={handleOpenInvite}
                       style={{
                         padding: "0.5rem 1rem", borderRadius: "10px", border: "none",
                         background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
@@ -424,7 +435,11 @@ export default function Collaboration({ selectedTaskId }) {
       {showInvite && selectedTask && (
         <InviteModal
           task={selectedTask}
-          inviteCode={generateInviteCode(selectedTask.id)}
+          inviteCode={taskInvite?.invite_code || ""}
+          expiresAt={taskInvite?.expires_at}
+          loading={creatingInvite}
+          error={taskInviteError}
+          onCreateInvite={handleOpenInvite}
           onJoinByCode={joinByCode}
           onClose={() => setShowInvite(false)}
         />

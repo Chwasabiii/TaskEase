@@ -161,19 +161,6 @@ export function useComments(taskId) {
     };
     mergeComment(optimisticComment);
 
-    const { data, error: insertError } = await supabase
-      .from("comments")
-      .insert([{ task_id: taskId, user_id: user.id, content: content.trim() }])
-      .select("*")
-      .single();
-
-    if (!insertError) {
-      const [commentWithProfile] = await attachProfiles([data]);
-      setComments((prev) => prev.filter((comment) => comment.id !== optimisticComment.id));
-      mergeComment(commentWithProfile);
-      return { data: commentWithProfile, error: null };
-    }
-
     const { data: inserted, error: rpcError } = await supabase
       .rpc("create_task_comment", {
         p_task_id: taskId,
@@ -182,8 +169,8 @@ export function useComments(taskId) {
 
     if (rpcError) {
       setComments((prev) => prev.filter((comment) => comment.id !== optimisticComment.id));
-      setError(insertError.message || rpcError.message || "Could not send comment.");
-      return { data: null, error: insertError };
+      setError(rpcError.message || "Could not send comment.");
+      return { data: null, error: rpcError };
     }
 
     const insertedComment = Array.isArray(inserted) ? inserted[0] : inserted;
@@ -208,24 +195,13 @@ export function useComments(taskId) {
   const deleteComment = async (commentId) => {
     setError("");
 
-    const { error: deleteError } = await supabase
-      .from("comments")
-      .delete()
-      .eq("id", commentId)
-      .eq("user_id", user.id);
-
-    if (!deleteError) {
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
-      return { error: null };
-    }
-
     const { error: rpcError } = await supabase.rpc("delete_task_comment", {
       p_comment_id: commentId,
     });
 
     if (rpcError) {
-      setError(deleteError.message || rpcError.message || "Could not delete comment.");
-      return { error: deleteError };
+      setError(rpcError.message || "Could not delete comment.");
+      return { error: rpcError };
     }
 
     setComments((prev) => prev.filter((c) => c.id !== commentId));

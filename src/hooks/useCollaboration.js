@@ -35,9 +35,18 @@ export function useCollaboration() {
     return { data, error };
   }, []);
 
-  // Generate invite code from task id
-  const generateInviteCode = (taskId) =>
-    taskId.replace(/-/g, "").slice(0, 8).toUpperCase();
+  // Create a secure invite code for a task.
+  const createInviteCode = async (taskId) => {
+    const { data, error } = await supabase
+      .rpc("create_task_invite", {
+        p_task_id: taskId,
+        p_expires_in_hours: 168,
+        p_max_uses: 20,
+      })
+      .single();
+
+    return { data, error };
+  };
 
   // Join a task via invite code
   const joinByCode = async (code) => {
@@ -68,14 +77,14 @@ export function useCollaboration() {
   // Update collaborator role
   const updateRole = async (collaboratorId, newRole) => {
     const { data, error } = await supabase
-      .from("collaborators")
-      .update({ role: newRole })
-      .eq("id", collaboratorId)
-      .select()
+      .rpc("update_task_collaborator_role", {
+        p_collaborator_id: collaboratorId,
+        p_role: newRole,
+      })
       .single();
     if (!error) {
       setCollaborators((prev) =>
-        prev.map((c) => (c.id === collaboratorId ? { ...c, role: newRole } : c))
+        prev.map((c) => (c.id === collaboratorId ? { ...c, role: data.role || newRole } : c))
       );
     }
     return { data, error };
@@ -84,9 +93,7 @@ export function useCollaboration() {
   // Remove collaborator
   const removeCollaborator = async (collaboratorId) => {
     const { error } = await supabase
-      .from("collaborators")
-      .delete()
-      .eq("id", collaboratorId);
+      .rpc("remove_task_collaborator", { p_collaborator_id: collaboratorId });
     if (!error) {
       setCollaborators((prev) => prev.filter((c) => c.id !== collaboratorId));
     }
@@ -121,7 +128,7 @@ export function useCollaboration() {
   return {
     sharedTasks, collaborators, loading,
     fetchSharedTasks, fetchCollaborators,
-    generateInviteCode, inviteByEmail,
+    createInviteCode, inviteByEmail,
     joinByCode, updateRole, removeCollaborator,
   };
 }

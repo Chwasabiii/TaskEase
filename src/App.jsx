@@ -80,7 +80,11 @@ function AppContent() {
   }, [user]);
 
   useEffect(() => {
-    loadProfileRequests();
+    const startProfileRequests = () => {
+      window.setTimeout(() => loadProfileRequests(), 0);
+    };
+
+    startProfileRequests();
     const intervalId = window.setInterval(loadProfileRequests, 30000);
 
     return () => window.clearInterval(intervalId);

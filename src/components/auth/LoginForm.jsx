@@ -1,4 +1,4 @@
-import { Button, TextInput } from "../ui";
+    import { Button, TextInput } from "../ui";
 
 export default function LoginForm({
   email,
@@ -8,6 +8,7 @@ export default function LoginForm({
   onSubmit,
   loading,
   error,
+  notice,
   onSwitchToRegister,
 }) {
   return (
@@ -15,6 +16,11 @@ export default function LoginForm({
       {error && (
         <div style={{ color: "#EF4444", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "12px", padding: "0.85rem" }}>
           {error}
+        </div>
+      )}
+      {notice && (
+        <div style={{ color: "#10B981", backgroundColor: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: "12px", padding: "0.85rem" }}>
+          {notice}
         </div>
       )}
       <TextInput

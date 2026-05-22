@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -36,7 +36,7 @@ async function getImageOrientation(file) {
             offset += skip;
           }
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
       resolve(1);
@@ -232,7 +232,7 @@ export default function Profile({ onNotify }) {
     transition: "background-color 0.2s ease",
   };
 
-  const loadNetwork = async () => {
+  const loadNetwork = useCallback(async () => {
     if (!user) return;
     setNetworkLoading(true);
 
@@ -261,9 +261,9 @@ export default function Profile({ onNotify }) {
     setIncoming((requests || []).map((row) => ({ ...row, requester: byId.get(row.requester_id) })));
     setSent((outgoing || []).map((row) => ({ ...row, addressee: byId.get(row.addressee_id) })));
     setNetworkLoading(false);
-  };
+  }, [user]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!user) return;
     const [{ count: completedTasks }, { count: focusSessions }, { data: sessionDates }] = await Promise.all([
       supabase.from("tasks").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "done"),
@@ -271,7 +271,7 @@ export default function Profile({ onNotify }) {
       supabase.from("pomodoro_sessions").select("started_at").eq("user_id", user.id).eq("completed", true).order("started_at", { ascending: false }),
     ]);
     setStats({ completedTasks: completedTasks || 0, focusSessions: focusSessions || 0, focusStreak: calculateFocusStreak(sessionDates || []) });
-  };
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;
@@ -305,7 +305,7 @@ export default function Profile({ onNotify }) {
     return () => {
       mounted = false;
     };
-  }, [user]);
+  }, [user, loadNetwork, loadStats]);
 
   // handle responsive layout
   useEffect(() => {
@@ -362,19 +362,19 @@ export default function Profile({ onNotify }) {
       });
       // show modal with slight delay to allow mount
       setTimeout(() => setModalVisible(true), 20);
-    } catch (err) {
+    } catch {
       setError("Unable to prepare image for cropping.");
     }
   };
 
-  const closeCrop = () => {
+  const closeCrop = useCallback(() => {
     // animate close
     setModalVisible(false);
     setTimeout(() => {
       if (crop?.url) URL.revokeObjectURL(crop.url);
       setCrop(null);
     }, 200);
-  };
+  }, [crop]);
 
   const onCropPointerDown = (e) => {
     if (!crop) return;
@@ -457,7 +457,7 @@ export default function Profile({ onNotify }) {
     }
   }, [crop]);
 
-  const confirmCropAndUpload = async () => {
+  const confirmCropAndUpload = useCallback(async () => {
     if (!crop || !user) return;
     setUploading(crop.field);
     setError("");
@@ -505,16 +505,10 @@ export default function Profile({ onNotify }) {
       if (crop?.url) URL.revokeObjectURL(crop.url);
       setCrop(null);
     }, 200);
-  };
+  }, [crop, user, updateProfileField]);
 
-  const handleSave = async () => {
-    const fullName = (profile.full_name || "").trim();
-    const username = (profile.username || "").trim();
-
-    if (!fullName || !username) {
-      setError("Full name and username are required.");
-      return;
-    }
+  const handleSave = useCallback(async () => {
+    if (saving) return;
 
     setSaving(true);
     setError("");
@@ -523,8 +517,8 @@ export default function Profile({ onNotify }) {
     const payload = {
       id: user.id,
       email: user.email?.toLowerCase() || (profile.email || "").toLowerCase(),
-      username: username.toLowerCase(),
-      full_name: fullName,
+      username: (profile.username || "").toLowerCase(),
+      full_name: profile.full_name,
       avatar_url: (profile.avatar_url || "").trim() || null,
       cover_url: (profile.cover_url || "").trim() || null,
       bio: (profile.bio || "").trim() || null,
@@ -546,7 +540,18 @@ export default function Profile({ onNotify }) {
       const result = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
       saveError = result.error;
       if (saveError) {
-        const { cover_url, profile_status, location, role_title, school_work, interests, website_url, show_bio, show_friends, show_stats, is_discoverable, ...fallbackPayload } = payload;
+        const fallbackPayload = { ...payload };
+        delete fallbackPayload.cover_url;
+        delete fallbackPayload.profile_status;
+        delete fallbackPayload.location;
+        delete fallbackPayload.role_title;
+        delete fallbackPayload.school_work;
+        delete fallbackPayload.interests;
+        delete fallbackPayload.website_url;
+        delete fallbackPayload.show_bio;
+        delete fallbackPayload.show_friends;
+        delete fallbackPayload.show_stats;
+        delete fallbackPayload.is_discoverable;
         const fallback = await supabase.from("profiles").upsert(fallbackPayload, { onConflict: "id" });
         saveError = fallback.error;
       }
@@ -562,7 +567,7 @@ export default function Profile({ onNotify }) {
       onNotify?.({ title: "Profile updated", message: "Your profile changes were saved.", type: "profile" });
     }
     setSaving(false);
-  };
+  }, [saving, user, profile, onNotify]);
 
   const handleRequest = async (id, nextStatus) => {
     setUpdatingId(id);
@@ -910,19 +915,6 @@ const sectionTitleStyle = {
   fontSize: "1rem",
   color: "var(--color-foreground)",
 };
-
-const primaryButtonStyle = (disabled) => ({
-  padding: "0.75rem 1.15rem",
-  borderRadius: "10px",
-  border: "none",
-  background: disabled ? "rgba(91,140,255,0.5)" : "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
-  color: "white",
-  fontFamily: "var(--font-body)",
-  fontWeight: 800,
-  fontSize: "0.9rem",
-  cursor: disabled ? "default" : "pointer",
-  marginBottom: "0.7rem",
-});
 
 const tabButtonStyle = (active) => ({
   padding: "0.55rem 0.75rem",

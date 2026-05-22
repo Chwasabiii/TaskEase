@@ -53,19 +53,33 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  const getEmailRedirectTo = () => window.location.origin;
+
   const signUp = async (email, password, fullName) => {
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim().toLowerCase(),
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        emailRedirectTo: getEmailRedirectTo(),
+        data: { full_name: fullName.trim() },
+      },
     });
     return { data, error };
   };
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
+    });
+    return { data, error };
+  };
+
+  const resendConfirmation = async (email) => {
+    const { data, error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: getEmailRedirectTo() },
     });
     return { data, error };
   };
@@ -79,7 +93,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut, resendConfirmation }}>
       {children}
     </AuthContext.Provider>
   );
