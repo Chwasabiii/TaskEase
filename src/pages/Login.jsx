@@ -16,6 +16,20 @@ export default function Login({ onSwitchToRegister }) {
     message?.toLowerCase().includes("email not confirmed") ||
     message?.toLowerCase().includes("not confirmed");
 
+  const getResetPasswordErrorMessage = (resetError) => {
+    const message = resetError?.message || "";
+    const status = resetError?.status;
+
+    if (status === 429) {
+      return "Too many reset emails were requested. Wait a minute, then try again.";
+    }
+    if (message.toLowerCase().includes("error sending recovery email")) {
+      return "Supabase could not send the recovery email. Check your custom SMTP host, port, username, password, and verified sender email in Supabase.";
+    }
+
+    return message || "Could not send reset email.";
+  };
+
   const handleLogin = async () => {
     if (!email || !password) return setError("Please fill in all fields.");
     setLoading(true);
@@ -44,7 +58,8 @@ export default function Login({ onSwitchToRegister }) {
     setNotice("");
     const { error } = await resetPassword(email);
     if (error) {
-      setError(error.message || "Could not send reset email.");
+      console.error("Password reset email failed:", error);
+      setError(getResetPasswordErrorMessage(error));
     } else {
       setNotice("Password reset email sent. Check your inbox and follow the link.");
     }

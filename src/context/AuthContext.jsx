@@ -53,7 +53,10 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const getEmailRedirectTo = () => window.location.origin;
+  const getAppUrl = () =>
+    (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, "");
+
+  const getEmailRedirectTo = () => getAppUrl();
 
   const signUp = async (email, password, fullName) => {
     const { data, error } = await supabase.auth.signUp({
@@ -77,7 +80,7 @@ export function AuthProvider({ children }) {
 
   const resetPassword = async (email) => {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-      redirectTo: window.location.origin,
+      redirectTo: `${getAppUrl()}/reset-password`,
     });
     return { data, error };
   };

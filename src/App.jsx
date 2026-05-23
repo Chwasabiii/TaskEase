@@ -16,6 +16,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -26,6 +27,7 @@ function AppContent() {
   const [focusLock, setFocusLock] = useState({ locked: false, taskTitle: "" });
   const [showFocusLockPrompt, setShowFocusLockPrompt] = useState(false);
   const [voiceTaskDraft, setVoiceTaskDraft] = useState(null);
+  const isResetPasswordPage = window.location.pathname === "/reset-password";
 
   const addNotification = useCallback((notification) => {
     setNotifications((prev) => [
@@ -217,6 +219,14 @@ function AppContent() {
   };
 
   if (loading) return null;
+
+  if (isResetPasswordPage) {
+    return (
+      <Suspense fallback={null}>
+        <ResetPassword />
+      </Suspense>
+    );
+  }
 
   if (!user) {
     return (
