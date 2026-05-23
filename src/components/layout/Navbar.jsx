@@ -411,7 +411,6 @@ export default function Navbar({
             backgroundColor: "var(--color-surface)",
             color: "var(--color-foreground)",
             cursor: "pointer",
-            display: "none",
             alignItems: "center",
             justifyContent: "center",
             fontSize: "1.1rem",

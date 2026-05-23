@@ -85,7 +85,7 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
 
   return (
     <aside
-      className={`app-sidebar${mobileOpen ? " mobile-open" : ""}`}
+      className={`app-sidebar${mobileOpen ? " mobile-open" : " mobile-hidden"}`}
       style={{
         width: collapsed ? "72px" : "240px",
         transition: "width var(--motion-spring)",
