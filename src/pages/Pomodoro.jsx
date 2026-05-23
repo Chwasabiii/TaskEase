@@ -193,7 +193,7 @@ export default function Pomodoro({ onNotify }) {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: "1.5rem" }}>
+      <div className="page-split">
         <div className="glass-card" style={{ padding: "1.5rem" }}>
           <PomodoroModeSelector modes={MODES} activeMode={mode} onSelectMode={setMode} />
 

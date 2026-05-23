@@ -14,6 +14,8 @@ export default function Navbar({
   onSendProfileRequest,
   onProfileRequestResponse,
   onRemoveProfileConnection,
+  mobileSidebarOpen,
+  setMobileSidebarOpen,
 }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -396,6 +398,27 @@ export default function Navbar({
       </h1>
 
       <div className="app-navbar-actions" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <button
+          type="button"
+          className="mobile-menu-toggle interactive-pop"
+          onClick={() => setMobileSidebarOpen?.((current) => !current)}
+          aria-label={mobileSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          style={{
+            width: "38px",
+            height: "38px",
+            borderRadius: "10px",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-surface)",
+            color: "var(--color-foreground)",
+            cursor: "pointer",
+            display: "none",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "1.1rem",
+          }}
+        >
+          ☰
+        </button>
         <ThemeToggle />
 
         <div ref={searchRef} className="app-navbar-search" style={{ position: "relative" }}>

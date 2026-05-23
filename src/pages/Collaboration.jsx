@@ -177,7 +177,7 @@ export default function Collaboration({ selectedTaskId }) {
       </div>
 
       {/* ── Main layout ── */}
-      <div style={{ display: "flex", gap: "1.5rem", minHeight: "500px" }}>
+      <div className="page-sidebar-split" style={{ minHeight: "500px" }}>
 
         {/* Left panel — task list */}
         <div style={{
@@ -333,7 +333,7 @@ export default function Collaboration({ selectedTaskId }) {
                 </h4>
                 {isTaskLeader && (
                   <>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 120px auto", gap: "0.5rem", marginBottom: "1rem" }}>
+                <div className="page-form-row" style={{ gap: "0.5rem", marginBottom: "1rem" }}>
                   <input
                     type="email"
                     value={inviteEmail}

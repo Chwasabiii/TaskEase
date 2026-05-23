@@ -79,13 +79,13 @@ function NavIcon({ name }) {
   return <svg {...common}>{paths[name]}</svg>;
 }
 
-export default function Sidebar({ activePage, setActivePage, collapsed, setCollapsed }) {
+export default function Sidebar({ activePage, setActivePage, collapsed, setCollapsed, mobileOpen, setMobileSidebarOpen }) {
   const { theme } = useTheme();
   const logoSrc = theme === "dark" ? "/taskease-logo-dark.jpg" : "/taskease-logo-light.png";
 
   return (
     <aside
-      className="app-sidebar"
+      className={`app-sidebar${mobileOpen ? " mobile-open" : ""}`}
       style={{
         width: collapsed ? "72px" : "240px",
         transition: "width var(--motion-spring)",
@@ -171,7 +171,10 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
             <button
               className={`nav-item interactive-pop${isActive ? " is-active" : ""}`}
               key={item.id}
-              onClick={() => setActivePage(item.id)}
+              onClick={() => {
+                setActivePage(item.id);
+                setMobileSidebarOpen?.(false);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",

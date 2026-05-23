@@ -19,6 +19,7 @@ export default function AppShell({
   onVoiceTaskDraft,
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const sidebarWidth = collapsed ? 72 : 240;
 
   return (
@@ -28,9 +29,17 @@ export default function AppShell({
         setActivePage={setActivePage}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
+        mobileOpen={mobileSidebarOpen}
+        setMobileSidebarOpen={setMobileSidebarOpen}
       />
 
       {/* Main content — offset by sidebar width */}
+      {mobileSidebarOpen && (
+        <div
+          className="mobile-sidebar-backdrop"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
       <div
         className="app-content"
         style={{
@@ -53,6 +62,8 @@ export default function AppShell({
           onSendProfileRequest={onSendProfileRequest}
           onProfileRequestResponse={onProfileRequestResponse}
           onRemoveProfileConnection={onRemoveProfileConnection}
+          mobileSidebarOpen={mobileSidebarOpen}
+          setMobileSidebarOpen={setMobileSidebarOpen}
         />
         <main
           className="app-main"
