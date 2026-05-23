@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { AuthShell, LoginForm } from "../components/auth";
+import { AuthShell, LoginForm, ForgotPasswordForm } from "../components/auth";
 
 export default function Login({ onSwitchToRegister }) {
-  const { signIn, resendConfirmation } = useAuth();
+  const { signIn, resetPassword, resendConfirmation } = useAuth();
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [notice, setNotice]     = useState("");
   const [loading, setLoading]   = useState(false);
   const [showResendPopup, setShowResendPopup] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   const isEmailNotConfirmed = (message) =>
     message?.toLowerCase().includes("email not confirmed") ||
@@ -28,6 +29,24 @@ export default function Login({ onSwitchToRegister }) {
       } else {
         setError("Invalid email or password.");
       }
+    }
+    setLoading(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setError("Enter your email first.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setNotice("");
+    const { error } = await resetPassword(email);
+    if (error) {
+      setError(error.message || "Could not send reset email.");
+    } else {
+      setNotice("Password reset email sent. Check your inbox and follow the link.");
     }
     setLoading(false);
   };
@@ -51,19 +70,49 @@ export default function Login({ onSwitchToRegister }) {
     setLoading(false);
   };
 
+  const handleForgotPassword = () => {
+    setShowResetPassword(true);
+    setError("");
+    setNotice("");
+    setShowResendPopup(false);
+    setPassword("");
+  };
+
+  const handleBackToLogin = () => {
+    setShowResetPassword(false);
+    setError("");
+    setNotice("");
+  };
+
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to your TaskEase account">
-      <LoginForm
-        email={email}
-        password={password}
-        onEmailChange={setEmail}
-        onPasswordChange={setPassword}
-        onSubmit={handleLogin}
-        loading={loading}
-        error={error}
-        notice={notice}
-        onSwitchToRegister={onSwitchToRegister}
-      />
+    <AuthShell
+      title={showResetPassword ? "Reset your password" : "Welcome back"}
+      subtitle={showResetPassword ? "Enter your email and we’ll send a reset link." : "Sign in to your TaskEase account"}
+    >
+      {showResetPassword ? (
+        <ForgotPasswordForm
+          email={email}
+          onEmailChange={setEmail}
+          onSubmit={handleResetPassword}
+          loading={loading}
+          error={error}
+          notice={notice}
+          onBackToLogin={handleBackToLogin}
+        />
+      ) : (
+        <LoginForm
+          email={email}
+          password={password}
+          onEmailChange={setEmail}
+          onPasswordChange={setPassword}
+          onSubmit={handleLogin}
+          loading={loading}
+          error={error}
+          notice={notice}
+          onSwitchToRegister={onSwitchToRegister}
+          onForgotPassword={handleForgotPassword}
+        />
+      )}
 
       {showResendPopup && (
         <div style={{

@@ -10,6 +10,7 @@ export default function LoginForm({
   error,
   notice,
   onSwitchToRegister,
+  onForgotPassword,
 }) {
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -47,11 +48,16 @@ export default function LoginForm({
       >
         {loading ? "Signing in..." : "Sign In"}
       </Button>
-      <div style={{ textAlign: "center", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
-        Don’t have an account?{' '}
-        <button type="button" onClick={onSwitchToRegister} style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontWeight: 700 }}>
-          Register
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>
+        <button type="button" onClick={onForgotPassword} style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontWeight: 700 }}>
+          Forgot password?
         </button>
+        <div>
+          Don’t have an account?{' '}
+          <button type="button" onClick={onSwitchToRegister} style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontWeight: 700 }}>
+            Register
+          </button>
+        </div>
       </div>
     </form>
   );
