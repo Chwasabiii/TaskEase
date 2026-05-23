@@ -1,29 +1,28 @@
 import { useTheme } from "../../context/theme";
-import Button from "./Button";
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-  const nextTheme = theme === "dark" ? "light" : "dark";
+  const isDark = theme === "dark";
 
   return (
-    <Button
-      variant="ghost"
-      onClick={toggleTheme}
-      style={{
-        borderColor: "var(--color-border)",
-        backgroundColor: "var(--color-surface)",
-        color: "var(--color-foreground)",
-        minWidth: "auto",
-        padding: "0.65rem 0.95rem",
-      }}
-    >
-      <span style={{ fontSize: "0.82rem", fontWeight: 700 }}>
-        {nextTheme === "dark" ? "Dark" : "Light"}
+    <label className="theme-switch" title={isDark ? "Switch to light mode" : "Switch to dark mode"}>
+      <input
+        className="theme-switch__input"
+        type="checkbox"
+        role="switch"
+        checked={isDark}
+        onChange={toggleTheme}
+      />
+      <span className="theme-switch__icon">
+        {Array.from({ length: 11 }, (_, index) => (
+          <span
+            key={index + 1}
+            className={`theme-switch__icon-part theme-switch__icon-part--${index + 1}`}
+          />
+        ))}
       </span>
-      <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>
-        mode
-      </span>
-    </Button>
+      <span className="theme-switch__sr">Dark Mode</span>
+    </label>
   );
 }
 

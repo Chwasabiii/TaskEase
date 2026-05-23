@@ -13,6 +13,7 @@ const FocusMode = lazy(() => import("./pages/FocusMode"));
 const Archive = lazy(() => import("./pages/Archive"));
 const Collaboration = lazy(() => import("./pages/Collaboration"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 
@@ -22,6 +23,9 @@ function AppContent() {
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [focusLock, setFocusLock] = useState({ locked: false, taskTitle: "" });
+  const [showFocusLockPrompt, setShowFocusLockPrompt] = useState(false);
+  const [voiceTaskDraft, setVoiceTaskDraft] = useState(null);
 
   const addNotification = useCallback((notification) => {
     setNotifications((prev) => [
@@ -35,6 +39,38 @@ function AppContent() {
   }, []);
 
   const clearNotifications = () => setNotifications([]);
+
+  const handleSetActivePage = useCallback((page) => {
+    if (focusLock.locked && page !== "focus") {
+      setActivePage("focus");
+      setShowFocusLockPrompt(true);
+      addNotification({
+        title: "Focus lock is on",
+        message: focusLock.taskTitle
+          ? `Finish or cancel the lock for "${focusLock.taskTitle}" first.`
+          : "Cancel the lock before leaving Focus Mode.",
+        type: "focus",
+      });
+      return;
+    }
+
+    setActivePage(page);
+  }, [addNotification, focusLock.locked, focusLock.taskTitle]);
+
+  const handleVoiceTaskDraft = useCallback((draft) => {
+    setVoiceTaskDraft({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      ...draft,
+    });
+    handleSetActivePage("tasks");
+  }, [handleSetActivePage]);
+
+  useEffect(() => {
+    if (focusLock.locked && activePage !== "focus") {
+      setActivePage("focus");
+      setShowFocusLockPrompt(true);
+    }
+  }, [activePage, focusLock.locked]);
 
   const loadProfileRequests = useCallback(async () => {
     if (!user) return;
@@ -176,7 +212,7 @@ function AppContent() {
       setSelectedTaskId(notification.targetTaskId);
     }
     if (notification.targetPage) {
-      setActivePage(notification.targetPage);
+      handleSetActivePage(notification.targetPage);
     }
   };
 
@@ -199,17 +235,23 @@ function AppContent() {
       case "dashboard":
         return (
           <Dashboard
-            setActivePage={setActivePage}
+            setActivePage={handleSetActivePage}
             onSelectSharedTask={setSelectedTaskId}
             onNotify={addNotification}
           />
         );
       case "tasks":
-        return <Tasks onNotify={addNotification} />;
+        return (
+          <Tasks
+            onNotify={addNotification}
+            voiceTaskDraft={voiceTaskDraft}
+            onVoiceTaskDraftHandled={() => setVoiceTaskDraft(null)}
+          />
+        );
       case "pomodoro":
         return <Pomodoro onNotify={addNotification} />;
       case "focus":
-        return <FocusMode onNotify={addNotification} />;
+        return <FocusMode onNotify={addNotification} onLockChange={setFocusLock} />;
       case "archive":
         return <Archive />;
       case "collaboration":
@@ -222,6 +264,8 @@ function AppContent() {
         );
       case "profile":
         return <Profile onNotify={addNotification} />;
+      case "privacy":
+        return <Privacy onNotify={addNotification} />;
       default:
         return <Dashboard onNotify={addNotification} />;
     }
@@ -231,7 +275,7 @@ function AppContent() {
     <ProtectedRoute>
       <AppShell
         activePage={activePage}
-        setActivePage={setActivePage}
+        setActivePage={handleSetActivePage}
         onSignOut={signOut}
         user={user}
         notifications={notifications}
@@ -241,9 +285,93 @@ function AppContent() {
         onProfileRequestResponse={handleProfileRequestResponse}
         onRemoveProfileConnection={handleRemoveProfileConnection}
         onNotify={addNotification}
+        onVoiceTaskDraft={handleVoiceTaskDraft}
       >
         <Suspense fallback={null}>{renderPage()}</Suspense>
       </AppShell>
+
+      {showFocusLockPrompt && focusLock.locked && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="focus-lock-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 14000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+            backgroundColor: "rgba(2, 6, 23, 0.35)",
+          }}
+          onClick={() => setShowFocusLockPrompt(false)}
+        >
+          <div
+            className="glass-card"
+            style={{
+              width: "min(360px, 100%)",
+              padding: "1.25rem",
+              textAlign: "center",
+              boxShadow: "0 24px 80px rgba(2, 6, 23, 0.35)",
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "14px",
+              margin: "0 auto 0.85rem",
+              display: "grid",
+              placeItems: "center",
+              background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+              color: "white",
+              fontFamily: "var(--font-heading)",
+              fontWeight: 800,
+            }}>
+              !
+            </div>
+            <h2
+              id="focus-lock-title"
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: "1.1rem",
+                fontWeight: 800,
+                color: "var(--color-foreground)",
+                marginBottom: "0.45rem",
+              }}
+            >
+              Site is locked
+            </h2>
+            <p style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.9rem",
+              lineHeight: 1.55,
+              color: "var(--color-muted)",
+              marginBottom: "1rem",
+            }}>
+              You locked TaskEase to focus
+              {focusLock.taskTitle ? ` on "${focusLock.taskTitle}"` : ""}. Cancel the lock first if you want to open another page.
+            </p>
+            <button
+              onClick={() => setShowFocusLockPrompt(false)}
+              style={{
+                width: "100%",
+                padding: "0.8rem 1rem",
+                borderRadius: "10px",
+                border: "none",
+                background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+                color: "white",
+                fontFamily: "var(--font-body)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Stay Focused
+            </button>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }

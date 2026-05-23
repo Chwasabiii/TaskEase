@@ -15,7 +15,7 @@ const MOTIVATIONS = [
 
 const BREAK_INTERVAL = 25 * 60;
 
-export default function FocusMode({ onNotify }) {
+export default function FocusMode({ onNotify, onLockChange }) {
   const { tasks, toggleComplete } = useTasks();
   const activeTasks = tasks.filter((t) => t.status !== "done");
 
@@ -26,6 +26,7 @@ export default function FocusMode({ onNotify }) {
   const [motivation, setMotivation]           = useState(MOTIVATIONS[0]);
   const [, setMotivationIndex]                 = useState(0);
   const [showTaskPicker, setShowTaskPicker]   = useState(false);
+  const [focusLocked, setFocusLocked]         = useState(false);
 
   const intervalRef = useRef(null);
 
@@ -82,9 +83,11 @@ export default function FocusMode({ onNotify }) {
     return `${m}:${s}`;
   };
 
-  const handleStart = () => {
+  const handleStart = (lockSite = false) => {
     if (!selectedTask) return;
     setStarted(true);
+    setFocusLocked(lockSite);
+    onLockChange?.({ locked: lockSite, taskTitle: lockSite ? selectedTask.title : "" });
     setElapsed(0);
     onNotify?.({
       title: "Focus session started ⚡",
@@ -95,6 +98,8 @@ export default function FocusMode({ onNotify }) {
 
   const handleStop = () => {
     setStarted(false);
+    setFocusLocked(false);
+    onLockChange?.({ locked: false, taskTitle: "" });
     setElapsed(0);
     onNotify?.({
       title: "Focus session stopped",
@@ -112,8 +117,20 @@ export default function FocusMode({ onNotify }) {
       type: "focus",
     });
     setStarted(false);
+    setFocusLocked(false);
+    onLockChange?.({ locked: false, taskTitle: "" });
     setElapsed(0);
     setSelectedTask(null);
+  };
+
+  const handleUnlockFocus = () => {
+    setFocusLocked(false);
+    onLockChange?.({ locked: false, taskTitle: "" });
+    onNotify?.({
+      title: "Focus lock cancelled",
+      message: "You can use the rest of TaskEase again. The timer is still running.",
+      type: "focus",
+    });
   };
 
   const handleBreakDone = () => {
@@ -165,7 +182,7 @@ export default function FocusMode({ onNotify }) {
           backgroundColor: "var(--color-overlay)",
           backdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 200,
+          zIndex: 12000,
         }}>
           <div className="glass-card" style={{ padding: "2.5rem", textAlign: "center", maxWidth: "380px" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>☕</div>
@@ -194,6 +211,187 @@ export default function FocusMode({ onNotify }) {
             >
               I'm back — keep going! 🚀
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Site lock overlay */}
+      {focusLocked && started && selectedTask && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 10000,
+          background:
+            "radial-gradient(circle at top left, rgba(91,140,255,0.22), transparent 32%), var(--color-background)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "1.5rem",
+          overflow: "auto",
+        }}>
+          <div style={{
+            width: "min(780px, 100%)",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1rem",
+          }}>
+            <div className="glass-card" style={{
+              flex: "1 1 380px",
+              minHeight: "420px",
+              padding: "2rem",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}>
+              <div>
+                <p style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#5B8CFF",
+                  marginBottom: "0.75rem",
+                }}>
+                  Locked Focus
+                </p>
+                <h2 style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "clamp(1.6rem, 4vw, 2.6rem)",
+                  fontWeight: 800,
+                  color: "var(--color-foreground)",
+                  lineHeight: 1.08,
+                  marginBottom: "0.85rem",
+                }}>
+                  {selectedTask.title}
+                </h2>
+                {selectedTask.description && (
+                  <p style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "0.95rem",
+                    color: "var(--color-muted)",
+                    lineHeight: 1.6,
+                    maxWidth: "48ch",
+                  }}>
+                    {selectedTask.description}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <div style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "clamp(4rem, 13vw, 7rem)",
+                  fontWeight: 800,
+                  color: "#5B8CFF",
+                  lineHeight: 1,
+                  letterSpacing: "0",
+                  marginBottom: "1rem",
+                }}>
+                  {formatTime(elapsed)}
+                </div>
+                <div style={{
+                  width: "100%",
+                  height: "8px",
+                  backgroundColor: "var(--color-border)",
+                  borderRadius: "999px",
+                  overflow: "hidden",
+                  marginBottom: "0.8rem",
+                }}>
+                  <div style={{
+                    width: `${progressPercent}%`,
+                    height: "100%",
+                    background: "linear-gradient(90deg, #5B8CFF, #7C5CFF)",
+                    borderRadius: "999px",
+                    transition: "width 1s linear",
+                  }} />
+                </div>
+                <p style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.85rem",
+                  color: "var(--color-muted)",
+                }}>
+                  Next break in {formatTime(BREAK_INTERVAL - (elapsed % BREAK_INTERVAL))}
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              flex: "1 1 260px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
+            }}>
+              <div className="glass-card" style={{ padding: "1.25rem" }}>
+                <h3 style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "var(--color-foreground)",
+                  marginBottom: "0.65rem",
+                }}>
+                  Stay with this
+                </h3>
+                <p style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.9rem",
+                  color: "var(--color-muted)",
+                  lineHeight: 1.55,
+                }}>
+                  {motivation}
+                </p>
+              </div>
+
+              <div className="glass-card" style={{ padding: "1.25rem" }}>
+                <h3 style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  color: "var(--color-foreground)",
+                  marginBottom: "0.85rem",
+                }}>
+                  Lock controls
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+                  <button
+                    onClick={handleUnlockFocus}
+                    style={{
+                      width: "100%",
+                      padding: "0.85rem 1rem",
+                      borderRadius: "10px",
+                      border: "1px solid var(--color-border)",
+                      backgroundColor: "var(--color-hover)",
+                      color: "var(--color-foreground)",
+                      fontFamily: "var(--font-body)",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel Lock
+                  </button>
+                  <button
+                    onClick={handleStop}
+                    style={{
+                      width: "100%",
+                      padding: "0.85rem 1rem",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #EF4444, #F97316)",
+                      color: "white",
+                      fontFamily: "var(--font-body)",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    End Focus Session
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ padding: "1.25rem", maxHeight: "260px", overflow: "auto" }}>
+                <FocusChecklist taskId={selectedTask.id} />
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -349,8 +547,9 @@ export default function FocusMode({ onNotify }) {
           {/* Controls */}
           <div style={{ display: "flex", gap: "0.75rem" }}>
             {!started ? (
+              <>
               <button
-                onClick={handleStart}
+                onClick={() => handleStart(false)}
                 disabled={!selectedTask}
                 style={{
                   flex: 1, padding: "0.875rem",
@@ -366,6 +565,25 @@ export default function FocusMode({ onNotify }) {
               >
                 ▶ Start Focus
               </button>
+              <button
+                onClick={() => handleStart(true)}
+                disabled={!selectedTask}
+                style={{
+                  flex: 1, padding: "0.875rem",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(91,140,255,0.45)",
+                  backgroundColor: !selectedTask ? "rgba(91,140,255,0.08)" : "rgba(91,140,255,0.14)",
+                  color: !selectedTask ? "var(--color-muted)" : "#5B8CFF",
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  cursor: !selectedTask ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                Lock Site
+              </button>
+              </>
             ) : (
               <>
                 <button

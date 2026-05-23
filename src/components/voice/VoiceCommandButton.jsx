@@ -46,8 +46,8 @@ const assistantStates = {
   },
 };
 
-export default function VoiceCommandButton({ setActivePage, onNotify }) {
-  const { tasks, createTask, updateTask } = useTasks();
+export default function VoiceCommandButton({ setActivePage, onNotify, onTaskDraft }) {
+  const { tasks, updateTask } = useTasks();
   const { theme, setTheme, toggleTheme } = useTheme();
   const {
     currentMode,
@@ -144,7 +144,7 @@ export default function VoiceCommandButton({ setActivePage, onNotify }) {
           return;
         }
 
-        const { error } = await createTask({
+        onTaskDraft?.({
           title,
           description: "",
           priority: command.priority,
@@ -153,13 +153,7 @@ export default function VoiceCommandButton({ setActivePage, onNotify }) {
           status: "todo",
         });
 
-        if (error) {
-          respond(error.message || "I could not create that task.", { error: true });
-          return;
-        }
-
-        setActivePage("tasks");
-        respond(`Created task: ${title}.`, { notify: true });
+        respond(`Review task details: ${title}.`, { notify: true });
         return;
       }
 
@@ -188,8 +182,8 @@ export default function VoiceCommandButton({ setActivePage, onNotify }) {
 
     respond("I did not recognize that yet. Try one of the examples below.", { error: true });
   }, [
-    createTask,
     currentMode.minutes,
+    onTaskDraft,
     respond,
     setActivePage,
     setIsRunning,

@@ -7,7 +7,19 @@ const MODES = [
   { id: "long", label: "Long Break", minutes: 15, accent: "#F59E0B" },
 ];
 
+export const ALARM_SOUNDS = [
+  { id: "classic", label: "Classic alarm", type: "audio", src: "/pomodoro-alarm.mp3" },
+  { id: "soft", label: "Soft chime", type: "tone" },
+  { id: "bright", label: "Bright beep", type: "tone" },
+  { id: "custom", label: "Custom upload", type: "custom" },
+];
+
 const PomodoroContext = createContext(null);
+
+const getStoredValue = (key, fallback) => {
+  if (typeof window === "undefined") return fallback;
+  return localStorage.getItem(key) || fallback;
+};
 
 export function PomodoroProvider({ children }) {
   const [mode, setMode] = useState("pomodoro");
@@ -16,17 +28,37 @@ export function PomodoroProvider({ children }) {
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [message, setMessage] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [alarmSoundId, setAlarmSoundId] = useState(() => getStoredValue("taskease-alarm-sound", "classic"));
+  const [customAlarmSound, setCustomAlarmSound] = useState(() => getStoredValue("taskease-custom-alarm", ""));
   const [showCompleteAlert, setShowCompleteAlert] = useState(false);
 
   const audioContextRef = useRef(null);
   const lastTickRef = useRef(null);
   const completionTimeoutRef = useRef(null);
   const intervalRef = useRef(null);
+  const alarmAudioRef = useRef(null);
 
   const currentMode = useMemo(
     () => MODES.find((item) => item.id === mode) || MODES[0],
     [mode]
   );
+
+  const alarmSound = useMemo(
+    () => ALARM_SOUNDS.find((sound) => sound.id === alarmSoundId) || ALARM_SOUNDS[0],
+    [alarmSoundId]
+  );
+
+  useEffect(() => {
+    localStorage.setItem("taskease-alarm-sound", alarmSoundId);
+  }, [alarmSoundId]);
+
+  useEffect(() => {
+    if (customAlarmSound) {
+      localStorage.setItem("taskease-custom-alarm", customAlarmSound);
+    } else {
+      localStorage.removeItem("taskease-custom-alarm");
+    }
+  }, [customAlarmSound]);
 
   const prepareAudioContext = useCallback(async () => {
     if (audioContextRef.current) return audioContextRef.current;
@@ -39,26 +71,106 @@ export function PomodoroProvider({ children }) {
     return audioContextRef.current;
   }, []);
 
-  const playPomodoroSound = useCallback(async () => {
-    if (!soundEnabled) return;
+  const playToneSound = useCallback(async (soundId = "bright") => {
     const audioCtx = await prepareAudioContext();
     if (!audioCtx) return;
 
-    const oscillator = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    oscillator.type = "triangle";
-    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    const notes = soundId === "soft"
+      ? [
+          [523.25, 0],
+          [659.25, 0.16],
+          [783.99, 0.32],
+        ]
+      : [
+          [880, 0],
+          [1046.5, 0.18],
+        ];
 
-    oscillator.connect(gain);
-    gain.connect(audioCtx.destination);
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + 0.25);
-    oscillator.onended = () => {
-      oscillator.disconnect();
-      gain.disconnect();
-    };
-  }, [prepareAudioContext, soundEnabled]);
+    notes.forEach(([frequency, offset]) => {
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      oscillator.type = soundId === "soft" ? "sine" : "triangle";
+      oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime + offset);
+      gain.gain.setValueAtTime(0.001, audioCtx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + offset + 0.28);
+
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+      oscillator.start(audioCtx.currentTime + offset);
+      oscillator.stop(audioCtx.currentTime + offset + 0.32);
+      oscillator.onended = () => {
+        oscillator.disconnect();
+        gain.disconnect();
+      };
+    });
+  }, [prepareAudioContext]);
+
+  const playAudioSound = useCallback(async (src) => {
+    if (!src) {
+      await playToneSound("bright");
+      return;
+    }
+
+    if (!alarmAudioRef.current || alarmAudioRef.current.src !== src) {
+      alarmAudioRef.current = new Audio(src);
+      alarmAudioRef.current.preload = "auto";
+    }
+
+    try {
+      alarmAudioRef.current.currentTime = 0;
+      await alarmAudioRef.current.play();
+    } catch {
+      await playToneSound("bright");
+    }
+  }, [playToneSound]);
+
+  const playAlarmSound = useCallback(async (sound = alarmSound) => {
+    if (sound.type === "audio") {
+      await playAudioSound(sound.src);
+      return;
+    }
+
+    if (sound.type === "custom") {
+      await playAudioSound(customAlarmSound);
+      return;
+    }
+
+    await playToneSound(sound.id);
+  }, [alarmSound, customAlarmSound, playAudioSound, playToneSound]);
+
+  const previewAlarmSound = useCallback(async (soundId = alarmSoundId) => {
+    const sound = ALARM_SOUNDS.find((item) => item.id === soundId) || ALARM_SOUNDS[0];
+    await playAlarmSound(sound);
+  }, [alarmSoundId, playAlarmSound]);
+
+  const updateAlarmSoundId = useCallback((soundId) => {
+    if (soundId === "custom" && !customAlarmSound) {
+      setMessage("Upload a custom alarm sound first.");
+      return;
+    }
+    setAlarmSoundId(soundId);
+    setMessage("");
+  }, [customAlarmSound]);
+
+  const updateCustomAlarmSound = useCallback((dataUrl) => {
+    setCustomAlarmSound(dataUrl);
+    setAlarmSoundId("custom");
+    setMessage("Custom alarm sound saved.");
+  }, []);
+
+  const clearCustomAlarmSound = useCallback(() => {
+    setCustomAlarmSound("");
+    if (alarmSoundId === "custom") {
+      setAlarmSoundId("classic");
+    }
+    setMessage("Custom alarm sound removed.");
+  }, [alarmSoundId]);
+
+  const playPomodoroSound = useCallback(async () => {
+    if (!soundEnabled) return;
+    await playAlarmSound();
+  }, [playAlarmSound, soundEnabled]);
 
   const handleComplete = useCallback(() => {
     setIsRunning(false);
@@ -142,6 +254,13 @@ export function PomodoroProvider({ children }) {
         setMessage,
         soundEnabled,
         setSoundEnabled,
+        alarmSounds: ALARM_SOUNDS,
+        alarmSoundId,
+        setAlarmSoundId: updateAlarmSoundId,
+        customAlarmSound,
+        setCustomAlarmSound: updateCustomAlarmSound,
+        clearCustomAlarmSound,
+        previewAlarmSound,
         showCompleteAlert,
         currentMode,
       }}

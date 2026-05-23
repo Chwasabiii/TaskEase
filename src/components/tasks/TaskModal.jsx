@@ -27,7 +27,7 @@ const getDateValue = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export default function TaskModal({ task, onSave, onClose }) {
+export default function TaskModal({ task, initialTask, onSave, onClose }) {
   const isEditing = !!task;
   const todayDateValue = getTodayDateValue();
 
@@ -44,19 +44,20 @@ export default function TaskModal({ task, onSave, onClose }) {
   const [error, setError]     = useState("");
 
   useEffect(() => {
-    if (task) {
+    if (task || initialTask) {
+      const sourceTask = task || initialTask;
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
-        title:       task.title || "",
-        description: task.description || "",
-        priority:    task.priority || "medium",
-        category:    task.category || "",
-        due_date:    task.due_date ? getDateValue(task.due_date) : "",
-        due_time:    task.due_date ? getTimeValue(task.due_date) : "",
-        status:      task.status || "todo",
+        title:       sourceTask.title || "",
+        description: sourceTask.description || "",
+        priority:    sourceTask.priority || "medium",
+        category:    sourceTask.category || "",
+        due_date:    sourceTask.due_date ? getDateValue(sourceTask.due_date) : "",
+        due_time:    sourceTask.due_date ? getTimeValue(sourceTask.due_date) : "",
+        status:      sourceTask.status || "todo",
       });
     }
-  }, [task]);
+  }, [initialTask, task]);
 
   const handleSave = async () => {
     if (!form.title.trim()) return setError("Title is required.");
@@ -126,13 +127,13 @@ export default function TaskModal({ task, onSave, onClose }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="glass-card"
+        className="glass-card task-modal-panel"
         style={{ width: "100%", maxWidth: "500px", padding: "2rem" }}
       >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
           <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.25rem", fontWeight: 700, color: "var(--color-foreground)" }}>
-            {isEditing ? "Edit Task" : "New Task"}
+            {isEditing ? "Edit Task" : initialTask ? "Review Voice Task" : "New Task"}
           </h2>
           <button
             onClick={onClose}
@@ -197,7 +198,7 @@ export default function TaskModal({ task, onSave, onClose }) {
           </div>
 
           {/* Priority + Status row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="task-form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>Priority</label>
               <select
@@ -230,7 +231,7 @@ export default function TaskModal({ task, onSave, onClose }) {
           </div>
 
           {/* Category + Due date row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="task-form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>Category</label>
               <select

@@ -26,7 +26,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive, 
 
   return (
     <div
-      className="glass-card"
+      className="glass-card task-card"
       style={{
         padding: "1.25rem",
         transition: "all 0.2s ease",
@@ -36,9 +36,10 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive, 
       onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
       onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem" }}>
+      <div className="task-card-layout" style={{ display: "flex", alignItems: "flex-start", gap: "0.875rem" }}>
         {/* Checkbox */}
         <button
+          className="task-card-view-button"
           onClick={() => onToggle(task.id, task.status)}
           style={{
             width: "22px",
@@ -174,7 +175,7 @@ export default function TaskCard({ task, onToggle, onEdit, onDelete, onArchive, 
 >
   ⊙
 </button>
-        <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+        <div className="task-card-actions" style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
           <button
             onClick={() => onEdit(task)}
             style={{

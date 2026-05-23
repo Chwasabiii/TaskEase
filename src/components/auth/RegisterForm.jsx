@@ -4,9 +4,11 @@ export default function RegisterForm({
   fullName,
   email,
   password,
+  confirmPassword,
   onFullNameChange,
   onEmailChange,
   onPasswordChange,
+  onConfirmPasswordChange,
   onSubmit,
   loading,
   error,
@@ -31,7 +33,7 @@ export default function RegisterForm({
         type="text"
         value={fullName}
         onChange={onFullNameChange}
-        placeholder="John Doe"
+        placeholder="Ex. John Doe"
         required
       />
       <TextInput
@@ -39,7 +41,7 @@ export default function RegisterForm({
         type="email"
         value={email}
         onChange={onEmailChange}
-        placeholder="you@example.com"
+        placeholder="Ex. you@example.com"
         required
       />
       <TextInput
@@ -47,7 +49,15 @@ export default function RegisterForm({
         type="password"
         value={password}
         onChange={onPasswordChange}
-        placeholder="Min. 6 characters"
+        placeholder="Ex. Min. 8 characters"
+        required
+      />
+      <TextInput
+        label="Confirm Password"
+        type="password"
+        value={confirmPassword}
+        onChange={onConfirmPasswordChange}
+        placeholder="Re-enter your password"
         required
       />
       <Button

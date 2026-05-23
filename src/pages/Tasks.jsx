@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTasks } from "../hooks/useTasks";
 import TaskList from "../components/tasks/TaskList";
 import TaskModal from "../components/tasks/TaskModal";
@@ -17,7 +17,7 @@ const formatDueDateTime = (date) => date
     })
   : null;
 
-export default function Tasks({ onNotify }) {
+export default function Tasks({ onNotify, voiceTaskDraft, onVoiceTaskDraftHandled }) {
   const {
     tasks, loading,
     createTask, updateTask,
@@ -27,9 +27,19 @@ export default function Tasks({ onNotify }) {
 
   const [showModal, setShowModal]     = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [draftTask, setDraftTask]     = useState(null);
   const [filter, setFilter]           = useState("All");
   const [priority, setPriority]       = useState("All");
   const [search, setSearch]           = useState("");
+
+  useEffect(() => {
+    if (!voiceTaskDraft) return;
+
+    setEditingTask(null);
+    setDraftTask(voiceTaskDraft);
+    setShowModal(true);
+    onVoiceTaskDraftHandled?.();
+  }, [onVoiceTaskDraftHandled, voiceTaskDraft]);
 
   const handleSave = async (formData) => {
     const dueDateText = formatDueDateTime(formData.due_date);
@@ -63,12 +73,14 @@ export default function Tasks({ onNotify }) {
 
   const handleEdit = (task) => {
     setEditingTask(task);
+    setDraftTask(null);
     setShowModal(true);
   };
 
   const handleClose = () => {
     setShowModal(false);
     setEditingTask(null);
+    setDraftTask(null);
   };
 
   const handleToggle = async (id, currentStatus) => {
@@ -219,6 +231,7 @@ export default function Tasks({ onNotify }) {
       {showModal && (
         <TaskModal
           task={editingTask}
+          initialTask={draftTask}
           onSave={handleSave}
           onClose={handleClose}
         />

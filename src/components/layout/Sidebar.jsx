@@ -1,15 +1,91 @@
+import { useTheme } from "../../context/theme";
+
 const navItems = [
-  { icon: "D", label: "Dashboard", id: "dashboard" },
-  { icon: "T", label: "My Tasks", id: "tasks" },
-  { icon: "P", label: "Pomodoro", id: "pomodoro" },
-  { icon: "A", label: "Archive", id: "archive" },
-  { icon: "F", label: "Focus Mode", id: "focus" },
-  { icon: "C", label: "Collaboration", id: "collaboration" },
+  { icon: "dashboard", label: "Dashboard", id: "dashboard" },
+  { icon: "tasks", label: "My Tasks", id: "tasks" },
+  { icon: "pomodoro", label: "Pomodoro", id: "pomodoro" },
+  { icon: "archive", label: "Archive", id: "archive" },
+  { icon: "focus", label: "Focus Mode", id: "focus" },
+  { icon: "collaboration", label: "Collaboration", id: "collaboration" },
 ];
 
+function NavIcon({ name }) {
+  const common = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+
+  const paths = {
+    dashboard: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </>
+    ),
+    tasks: (
+      <>
+        <path d="M9 7h11" />
+        <path d="M9 12h11" />
+        <path d="M9 17h11" />
+        <path d="m4 7 1 1 2-2" />
+        <path d="m4 12 1 1 2-2" />
+        <path d="m4 17 1 1 2-2" />
+      </>
+    ),
+    pomodoro: (
+      <>
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l3 2" />
+        <path d="M9 2h6" />
+      </>
+    ),
+    archive: (
+      <>
+        <path d="M4 7h16" />
+        <path d="M5 7v12h14V7" />
+        <path d="M8 7V4h8v3" />
+        <path d="M10 12h4" />
+      </>
+    ),
+    focus: (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3" />
+        <path d="M12 19v3" />
+        <path d="M2 12h3" />
+        <path d="M19 12h3" />
+      </>
+    ),
+    collaboration: (
+      <>
+        <circle cx="8" cy="8" r="3" />
+        <circle cx="17" cy="10" r="2.5" />
+        <path d="M3 20c.8-3.4 2.7-5 5-5s4.2 1.6 5 5" />
+        <path d="M14 20c.5-2.3 1.8-3.5 3.5-3.5 1.5 0 2.7.9 3.5 3.5" />
+      </>
+    ),
+  };
+
+  return <svg {...common}>{paths[name]}</svg>;
+}
+
 export default function Sidebar({ activePage, setActivePage, collapsed, setCollapsed }) {
+  const { theme } = useTheme();
+  const logoSrc = theme === "dark" ? "/taskease-logo-dark.jpg" : "/taskease-logo-light.png";
+
   return (
     <aside
+      className="app-sidebar"
       style={{
         width: collapsed ? "72px" : "240px",
         transition: "width var(--motion-spring)",
@@ -27,6 +103,7 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
       }}
     >
       <button
+        className="app-sidebar-brand"
         onClick={() => setActivePage("dashboard")}
         style={{
           padding: "1.5rem 1.25rem",
@@ -49,18 +126,25 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
             width: "36px",
             height: "36px",
             borderRadius: "10px",
-            background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+            backgroundColor: theme === "dark" ? "#050505" : "#ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "0.9rem",
-            fontWeight: 800,
-            color: "var(--color-on-primary)",
             flexShrink: 0,
             boxShadow: "0 10px 24px var(--color-glow)",
+            overflow: "hidden",
           }}
         >
-          TE
+          <img
+            src={logoSrc}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: "scale(1.65)",
+            }}
+          />
         </div>
         {!collapsed && (
           <span
@@ -80,7 +164,7 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
         )}
       </button>
 
-      <nav style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+      <nav className="app-sidebar-nav" style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "4px" }}>
         {navItems.map((item) => {
           const isActive = activePage === item.id;
           return (
@@ -107,8 +191,8 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
                 whiteSpace: "nowrap",
               }}
             >
-              <span style={{ fontSize: "0.82rem", fontWeight: 800, flexShrink: 0, width: "1.1rem", textAlign: "center" }}>
-                {item.icon}
+              <span style={{ flexShrink: 0, width: "1.1rem", height: "1.1rem", display: "grid", placeItems: "center" }}>
+                <NavIcon name={item.icon} />
               </span>
               {!collapsed && (
                 <span
@@ -139,6 +223,7 @@ export default function Sidebar({ activePage, setActivePage, collapsed, setColla
       </nav>
 
       <div
+        className="app-sidebar-footer"
         style={{
           padding: "0.75rem",
           borderTop: "1px solid var(--color-border)",

@@ -16,12 +16,13 @@ export default function AppShell({
   onProfileRequestResponse,
   onRemoveProfileConnection,
   onNotify,
+  onVoiceTaskDraft,
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const sidebarWidth = collapsed ? 72 : 240;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--color-background)" }}>
+    <div className="app-shell" style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--color-background)" }}>
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
@@ -31,6 +32,7 @@ export default function AppShell({
 
       {/* Main content — offset by sidebar width */}
       <div
+        className="app-content"
         style={{
           marginLeft: `${sidebarWidth}px`,
           flex: 1,
@@ -53,6 +55,7 @@ export default function AppShell({
           onRemoveProfileConnection={onRemoveProfileConnection}
         />
         <main
+          className="app-main"
           style={{
             flex: 1,
             padding: "2rem",
@@ -63,7 +66,11 @@ export default function AppShell({
             {children}
           </div>
         </main>
-        <VoiceCommandButton setActivePage={setActivePage} onNotify={onNotify} />
+        <VoiceCommandButton
+          setActivePage={setActivePage}
+          onNotify={onNotify}
+          onTaskDraft={onVoiceTaskDraft}
+        />
       </div>
     </div>
   );

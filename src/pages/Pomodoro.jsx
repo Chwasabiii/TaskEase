@@ -34,6 +34,13 @@ export default function Pomodoro({ onNotify }) {
     setMessage,
     soundEnabled,
     setSoundEnabled,
+    alarmSounds,
+    alarmSoundId,
+    setAlarmSoundId,
+    customAlarmSound,
+    setCustomAlarmSound,
+    clearCustomAlarmSound,
+    previewAlarmSound,
     showCompleteAlert,
     currentMode,
   } = usePomodoro();
@@ -98,6 +105,30 @@ export default function Pomodoro({ onNotify }) {
     setIsRunning(false);
     setSecondsLeft(currentMode.minutes * 60);
     setMessage("");
+  };
+
+  const handleCustomAlarmUpload = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) {
+      setMessage("Please upload an audio file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage("Please choose an alarm sound under 2 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCustomAlarmSound(reader.result);
+    };
+    reader.onerror = () => {
+      setMessage("Unable to load that audio file.");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveSession = async () => {
@@ -240,6 +271,64 @@ export default function Pomodoro({ onNotify }) {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          <div className="glass-card" style={{ padding: "1.5rem" }}>
+            <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.05rem", fontWeight: 700, color: "var(--color-foreground)", marginBottom: "0.35rem" }}>
+              Alarm Sound
+            </h3>
+            <p style={{ margin: "0 0 1rem", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.84rem", lineHeight: 1.45 }}>
+              Choose a built-in alarm or upload your own.
+            </p>
+
+            <div style={{ display: "grid", gap: "0.75rem" }}>
+              <select
+                value={alarmSoundId}
+                onChange={(event) => setAlarmSoundId(event.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 0.85rem",
+                  borderRadius: "10px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-strong)",
+                  color: "var(--color-foreground)",
+                  fontFamily: "var(--font-body)",
+                }}
+              >
+                {alarmSounds.map((sound) => (
+                  <option key={sound.id} value={sound.id} disabled={sound.id === "custom" && !customAlarmSound}>
+                    {sound.label}{sound.id === "custom" && !customAlarmSound ? " (upload first)" : ""}
+                  </option>
+                ))}
+              </select>
+
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => previewAlarmSound(alarmSoundId)}
+                  style={{ padding: "0.55rem 0.75rem", borderRadius: "9px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)", color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontWeight: 800, cursor: "pointer" }}
+                >
+                  Preview
+                </button>
+                <label style={{ padding: "0.55rem 0.75rem", borderRadius: "9px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)", color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.82rem", fontWeight: 800, cursor: "pointer" }}>
+                  Upload
+                  <input type="file" accept="audio/*" onChange={handleCustomAlarmUpload} style={{ display: "none" }} />
+                </label>
+                {customAlarmSound && (
+                  <button
+                    type="button"
+                    onClick={clearCustomAlarmSound}
+                    style={{ padding: "0.55rem 0.75rem", borderRadius: "9px", border: "1px solid rgba(239,68,68,0.35)", backgroundColor: "rgba(239,68,68,0.1)", color: "#EF4444", fontFamily: "var(--font-body)", fontWeight: 800, cursor: "pointer" }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              <p style={{ margin: 0, color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.78rem" }}>
+                Custom sounds are saved in this browser only.
+              </p>
+            </div>
+          </div>
+
           <div className="glass-card" style={{ padding: "1.5rem" }}>
             <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.05rem", fontWeight: 700, color: "var(--color-foreground)", marginBottom: "1rem" }}>
               Recent Pomodoro Sessions

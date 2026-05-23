@@ -114,6 +114,8 @@ export default function Profile({ onNotify }) {
   const [sent, setSent] = useState([]);
   const [activeTab, setActiveTab] = useState("friends");
   const [stats, setStats] = useState({ completedTasks: 0, focusSessions: 0, focusStreak: 0 });
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [weeklyActivity, setWeeklyActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [networkLoading, setNetworkLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -125,7 +127,6 @@ export default function Profile({ onNotify }) {
   const cropRef = useRef({ dragging: false, startX: 0, startY: 0 });
   const modalRef = useRef(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [isNarrow, setIsNarrow] = useState(false);
 
   const completion = useMemo(() => {
     const checks = [
@@ -158,29 +159,6 @@ export default function Profile({ onNotify }) {
     )
   );
 
-  const inputStyle = {
-    width: "100%",
-    padding: "0.7rem 0.9rem",
-    borderRadius: "10px",
-    border: "1px solid var(--color-border)",
-    backgroundColor: "var(--color-hover)",
-    color: "var(--color-foreground)",
-    fontFamily: "var(--font-body)",
-    fontSize: "0.9rem",
-    outline: "none",
-    transition: "box-shadow 0.16s ease, border-color 0.16s ease, transform 0.08s ease",
-    boxSizing: "border-box",
-  };
-
-  const labelStyle = {
-    display: "block",
-    marginBottom: "0.4rem",
-    color: "var(--color-muted)",
-    fontFamily: "var(--font-body)",
-    fontSize: "0.8rem",
-    fontWeight: 700,
-  };
-
   const smallText = {
     margin: 0,
     color: "var(--color-muted)",
@@ -188,49 +166,40 @@ export default function Profile({ onNotify }) {
     fontSize: "0.85rem",
   };
 
-  const privacyCardStyle = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "1rem",
-    padding: "1rem",
-    borderRadius: "16px",
+  const panelStyle = {
     border: "1px solid var(--color-border)",
-    backgroundColor: "var(--color-subtle)",
+    borderRadius: "16px",
+    backgroundColor: "var(--color-surface)",
+    padding: "1.25rem",
+    boxShadow: "0 18px 48px rgba(15, 23, 42, 0.08)",
   };
 
-  const privacyTextStyle = {
-    margin: 0,
-    color: "var(--color-foreground)",
-    fontFamily: "var(--font-body)",
-    fontSize: "0.92rem",
-    fontWeight: 700,
-  };
-
-  const privacyHintStyle = {
-    margin: "0.35rem 0 0",
-    color: "#6b7280",
-    fontFamily: "var(--font-body)",
-    fontSize: "0.8rem",
-    lineHeight: 1.4,
-  };
-
-  const toggleInputStyle = {
-    position: "absolute",
-    opacity: 0,
-    left: "-9999px",
-    width: "1px",
-    height: "1px",
-  };
-
-  const toggleSliderStyle = {
-    position: "relative",
-    width: "46px",
-    height: "24px",
-    borderRadius: "999px",
-    backgroundColor: "rgba(148,163,184,0.25)",
-    transition: "background-color 0.2s ease",
-  };
+  const achievementBadges = [
+    {
+      title: "Task finisher",
+      detail: `${stats.completedTasks} completed task${stats.completedTasks === 1 ? "" : "s"}`,
+      current: stats.completedTasks,
+      target: 10,
+    },
+    {
+      title: "Focus builder",
+      detail: `${stats.focusSessions} completed focus session${stats.focusSessions === 1 ? "" : "s"}`,
+      current: stats.focusSessions,
+      target: 10,
+    },
+    {
+      title: "Streak keeper",
+      detail: `${stats.focusStreak} day focus streak`,
+      current: stats.focusStreak,
+      target: 7,
+    },
+    {
+      title: "Connected",
+      detail: `${friends.length} profile connection${friends.length === 1 ? "" : "s"}`,
+      current: friends.length,
+      target: 5,
+    },
+  ];
 
   const loadNetwork = useCallback(async () => {
     if (!user) return;
@@ -273,6 +242,97 @@ export default function Profile({ onNotify }) {
     setStats({ completedTasks: completedTasks || 0, focusSessions: focusSessions || 0, focusStreak: calculateFocusStreak(sessionDates || []) });
   }, [user]);
 
+  const loadRecentActivity = useCallback(async () => {
+    if (!user) return;
+
+    const [{ data: taskRows }, { data: focusRows }] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("id, title, status, created_at, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("pomodoro_sessions")
+        .select("id, started_at, completed")
+        .eq("user_id", user.id)
+        .eq("completed", true)
+        .order("started_at", { ascending: false })
+        .limit(5),
+    ]);
+
+    const taskActivity = (taskRows || []).map((task) => ({
+      id: `task-${task.id}`,
+      type: "Task",
+      title: task.status === "done" ? `Completed ${task.title || "a task"}` : `Updated ${task.title || "a task"}`,
+      detail: task.status === "done" ? "Marked done" : "Task updated",
+      date: task.updated_at || task.created_at,
+    }));
+
+    const focusActivity = (focusRows || []).map((session) => ({
+      id: `focus-${session.id}`,
+      type: "Focus",
+      title: "Completed a focus session",
+      detail: "Pomodoro session",
+      date: session.started_at,
+    }));
+
+    setRecentActivity([...taskActivity, ...focusActivity]
+      .filter((item) => item.date)
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 6));
+  }, [user]);
+
+  const loadWeeklyActivity = useCallback(async () => {
+    if (!user) return;
+
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 6);
+    startDate.setHours(0, 0, 0, 0);
+
+    const [{ data: completedTasks }, { data: focusSessions }] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("id, updated_at, created_at")
+        .eq("user_id", user.id)
+        .eq("status", "done")
+        .gte("updated_at", startDate.toISOString()),
+      supabase
+        .from("pomodoro_sessions")
+        .select("id, started_at")
+        .eq("user_id", user.id)
+        .eq("completed", true)
+        .gte("started_at", startDate.toISOString()),
+    ]);
+
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      return {
+        key: date.toDateString(),
+        label: date.toLocaleDateString([], { weekday: "short" }),
+        tasks: 0,
+        focus: 0,
+      };
+    });
+
+    const byDay = new Map(days.map((day) => [day.key, day]));
+
+    (completedTasks || []).forEach((task) => {
+      const key = new Date(task.updated_at || task.created_at).toDateString();
+      const day = byDay.get(key);
+      if (day) day.tasks += 1;
+    });
+
+    (focusSessions || []).forEach((session) => {
+      const key = new Date(session.started_at).toDateString();
+      const day = byDay.get(key);
+      if (day) day.focus += 1;
+    });
+
+    setWeeklyActivity(days);
+  }, [user]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -301,20 +361,13 @@ export default function Profile({ onNotify }) {
     loadProfile();
     loadNetwork();
     loadStats();
+    loadRecentActivity();
+    loadWeeklyActivity();
 
     return () => {
       mounted = false;
     };
-  }, [user, loadNetwork, loadStats]);
-
-  // handle responsive layout
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 880px)');
-    const onChange = () => setIsNarrow(mq.matches);
-    onChange();
-    mq.addEventListener?.('change', onChange);
-    return () => mq.removeEventListener?.('change', onChange);
-  }, []);
+  }, [user, loadNetwork, loadStats, loadRecentActivity, loadWeeklyActivity]);
 
   const updateProfileField = (field, value) => {
     setProfile((current) => ({ ...current, [field]: value }));
@@ -528,10 +581,6 @@ export default function Profile({ onNotify }) {
       school_work: (profile.school_work || "").trim() || null,
       interests: (profile.interests || "").trim() || null,
       website_url: (profile.website_url || "").trim() || null,
-      show_bio: Boolean(profile.show_bio),
-      show_friends: Boolean(profile.show_friends),
-      show_stats: Boolean(profile.show_stats),
-      is_discoverable: Boolean(profile.is_discoverable),
       updated_at: new Date().toISOString(),
     };
 
@@ -548,10 +597,6 @@ export default function Profile({ onNotify }) {
         delete fallbackPayload.school_work;
         delete fallbackPayload.interests;
         delete fallbackPayload.website_url;
-        delete fallbackPayload.show_bio;
-        delete fallbackPayload.show_friends;
-        delete fallbackPayload.show_stats;
-        delete fallbackPayload.is_discoverable;
         const fallback = await supabase.from("profiles").upsert(fallbackPayload, { onConflict: "id" });
         saveError = fallback.error;
       }
@@ -563,6 +608,7 @@ export default function Profile({ onNotify }) {
       setError(saveError.message);
     } else {
       setProfile((current) => ({ ...current, ...payload }));
+      window.dispatchEvent(new CustomEvent("taskease:profile-updated", { detail: { profile: payload } }));
       setStatus("Profile updated.");
       onNotify?.({ title: "Profile updated", message: "Your profile changes were saved.", type: "profile" });
     }
@@ -688,138 +734,185 @@ export default function Profile({ onNotify }) {
         </div>
       </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(260px, 0.75fr) minmax(0, 1.25fr)", gap: "1.5rem", alignItems: "start" }}>
-        <div style={{ display: "grid", gap: "1.5rem" }}>
-          <section className="glass-card" style={{ padding: "1.25rem" }}>
-            <h3 style={sectionTitleStyle}>Profile Completion</h3>
+      <section style={{ ...panelStyle, display: "grid", gap: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: "1rem", flexWrap: "wrap" }}>
+          <div>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: "0.25rem" }}>Profile overview</h3>
+            <p style={smallText}>Your public profile, activity, and connection snapshot.</p>
+          </div>
+          <div style={{ minWidth: "180px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", marginBottom: "0.45rem" }}>
+              <span style={smallText}>Completion</span>
+              <strong style={{ color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>{completion}%</strong>
+            </div>
             <div style={{ height: "9px", borderRadius: "999px", backgroundColor: "var(--color-subtle)", overflow: "hidden" }}>
               <div style={{ width: `${completion}%`, height: "100%", background: "linear-gradient(135deg, #5B8CFF, #10B981)" }} />
             </div>
-            <p style={{ ...smallText, marginTop: "0.65rem" }}>{completion}% complete</p>
-          </section>
+          </div>
+        </div>
 
-          <section className="glass-card" style={{ padding: "1.25rem" }}>
-            <h3 style={sectionTitleStyle}>Activity Summary</h3>
-            <div style={{ display: "grid", gap: "0.75rem" }}>
-              {[
-                ["Friends", friends.length],
-                ["Completed tasks", stats.completedTasks],
-                ["Focus sessions", stats.focusSessions],
-                ["Focus streak", `${stats.focusStreak} day${stats.focusStreak === 1 ? "" : "s"}`],
-                ["Joined", joinedDate],
-              ].map(([label, value]) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
-                  <span style={smallText}>{label}</span>
-                  <strong style={{ color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>{value}</strong>
-                </div>
-              ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.85rem" }}>
+          {[
+            ["Friends", friends.length],
+            ["Completed", stats.completedTasks],
+            ["Focus sessions", stats.focusSessions],
+            ["Focus streak", `${stats.focusStreak}d`],
+            ["Joined", joinedDate],
+          ].map(([label, value]) => (
+            <div key={label} style={{ border: "1px solid var(--color-border)", borderRadius: "12px", backgroundColor: "var(--color-subtle)", padding: "0.85rem" }}>
+              <p style={{ ...smallText, fontSize: "0.76rem", fontWeight: 800 }}>{label}</p>
+              <strong style={{ display: "block", marginTop: "0.35rem", color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "1.1rem", overflowWrap: "anywhere" }}>{value}</strong>
             </div>
-          </section>
+          ))}
+        </div>
+      </section>
 
-          <section className="glass-card" style={{ padding: "1.25rem" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", marginBottom: "1rem" }}>
-              <h3 style={sectionTitleStyle}>Privacy</h3>
-              <p style={smallText}>Choose what others can see when they visit your profile. These settings are saved instantly as you toggle them.</p>
-            </div>
-            <div style={{ display: "grid", gap: "0.85rem" }}>
-              {[
-                ["show_bio", "Show bio and about", "Let others see your personal summary and interests."],
-                ["show_friends", "Show friends list", "Allow people to discover who you are connected with."],
-                ["show_stats", "Show activity stats", "Share your completed tasks and focus streaks."],
-                ["is_discoverable", "Show in profile search", "Appear in search results for other users."],
-              ].map(([field, label, hint]) => (
-                <div key={field} style={privacyCardStyle}>
+      {(error || status || uploading) && (
+        <div style={alertStyle(error ? "#EF4444" : "#10B981")}>
+          {error || status || `Uploading ${uploading === "avatar_url" ? "avatar" : "cover"}...`}
+        </div>
+      )}
+
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", alignItems: "start" }}>
+        <div style={{ ...panelStyle, display: "grid", gap: "0.85rem" }}>
+          <div>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: "0.25rem" }}>Recent Activity</h3>
+            <p style={smallText}>Latest profile, task, and focus updates.</p>
+          </div>
+          {recentActivity.length === 0 ? (
+            <p style={{ ...smallText, padding: "0.85rem", borderRadius: "12px", backgroundColor: "var(--color-subtle)" }}>
+              No activity yet. Complete tasks or focus sessions to build your timeline.
+            </p>
+          ) : (
+            <div style={{ display: "grid", gap: "0.65rem" }}>
+              {recentActivity.map((activity) => (
+                <div key={activity.id} style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr)", gap: "0.75rem", alignItems: "start", padding: "0.85rem", borderRadius: "12px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)" }}>
+                  <span style={{ width: "34px", height: "34px", borderRadius: "10px", display: "grid", placeItems: "center", backgroundColor: "var(--color-primary-soft)", color: "var(--color-primary)", fontFamily: "var(--font-heading)", fontSize: "0.78rem", fontWeight: 800 }}>
+                    {activity.type[0]}
+                  </span>
                   <div style={{ minWidth: 0 }}>
-                    <p style={privacyTextStyle}>{label}</p>
-                    <p style={privacyHintStyle}>{hint}</p>
+                    <p style={{ margin: 0, color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 800, overflowWrap: "anywhere" }}>
+                      {activity.title}
+                    </p>
+                    <p style={{ ...smallText, marginTop: "0.2rem" }}>
+                      {activity.detail} - {new Date(activity.date).toLocaleDateString([], { month: "short", day: "numeric" })}
+                    </p>
                   </div>
-                  <label style={{ position: "relative", display: "inline-block", width: "46px", height: "24px" }}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(profile[field])}
-                      onChange={(event) => updateProfileField(field, event.target.checked)}
-                      style={toggleInputStyle}
-                      aria-hidden={false}
-                    />
-                    <span
-                      role="switch"
-                      aria-checked={Boolean(profile[field])}
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          updateProfileField(field, !profile[field]);
-                        }
-                      }}
-                      onClick={() => updateProfileField(field, !profile[field])}
-                      style={{ ...toggleSliderStyle, backgroundColor: profile[field] ? "#5B8CFF" : "rgba(148,163,184,0.25)", outline: "none" }}
-                    >
-                      <span style={{
-                        position: "absolute",
-                        top: "2px",
-                        left: profile[field] ? "22px" : "2px",
-                        width: "20px",
-                        height: "20px",
-                        borderRadius: "50%",
-                        backgroundColor: "white",
-                        boxShadow: "0 2px 6px rgba(15,23,42,0.18)",
-                        transition: "left 0.2s ease",
-                      }} />
-                    </span>
-                  </label>
                 </div>
               ))}
             </div>
-          </section>
+          )}
         </div>
 
-        <div style={{ display: "grid", gap: "1.5rem" }}>
-          <section className="glass-card" style={{ padding: "1.5rem" }}>
-            <h3 style={sectionTitleStyle}>Edit Profile</h3>
-            {error && <div style={alertStyle("#EF4444")}>{error}</div>}
-            {status && <div style={alertStyle("#10B981")}>{status}</div>}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "1rem" }}>
-              <Field label="Email"><input type="email" value={profile.email} disabled style={{ ...inputStyle, opacity: 0.7 }} /></Field>
-              <Field label="Full Name"><input value={profile.full_name} onChange={(event) => updateProfileField("full_name", event.target.value)} style={inputStyle} /></Field>
-              <Field label="Username"><input value={profile.username} onChange={(event) => updateProfileField("username", event.target.value)} style={inputStyle} /></Field>
-              <Field label="Status"><input value={profile.profile_status} onChange={(event) => updateProfileField("profile_status", event.target.value)} placeholder="Available, Busy, Focusing..." style={inputStyle} /></Field>
-              <Field label="Role / Title"><input value={profile.role_title} onChange={(event) => updateProfileField("role_title", event.target.value)} style={inputStyle} /></Field>
-              <Field label="Location"><input value={profile.location} onChange={(event) => updateProfileField("location", event.target.value)} style={inputStyle} /></Field>
-              <Field label="School / Work"><input value={profile.school_work} onChange={(event) => updateProfileField("school_work", event.target.value)} style={inputStyle} /></Field>
-              <Field label="Website"><input type="url" value={profile.website_url} onChange={(event) => updateProfileField("website_url", event.target.value)} style={inputStyle} /></Field>
-              <FieldWithHint label="Avatar URL" hint="Paste an image URL or click the avatar to upload.">
-                <input type="url" value={profile.avatar_url} onChange={(event) => updateProfileField("avatar_url", event.target.value)} style={inputStyle} />
-              </FieldWithHint>
-              <FieldWithHint label="Cover URL" hint="Paste an image URL or click the cover to upload.">
-                <input type="url" value={profile.cover_url} onChange={(event) => updateProfileField("cover_url", event.target.value)} style={inputStyle} />
-              </FieldWithHint>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={labelStyle}>Bio</label>
-                <textarea value={profile.bio} onChange={(event) => updateProfileField("bio", event.target.value)} rows={4} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={labelStyle}>Interests</label>
-                <textarea value={profile.interests} onChange={(event) => updateProfileField("interests", event.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5 }} />
-              </div>
-            </div>
-            {uploading && <p style={{ ...smallText, marginTop: "0.75rem" }}>Uploading {uploading === "avatar_url" ? "avatar" : "cover"}...</p>}
-          </section>
+        <div style={{ ...panelStyle, display: "grid", gap: "0.85rem" }}>
+          <div>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: "0.25rem" }}>Achievements</h3>
+            <p style={smallText}>Milestones earned from task and focus progress.</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+            {achievementBadges.map((badge) => {
+              const complete = badge.current >= badge.target;
 
-          <section className="glass-card" style={{ padding: "1.25rem" }}>
-            <h3 style={sectionTitleStyle}>Friend Management</h3>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-              {[
-                ["friends", `Friends (${friends.length})`],
-                ["received", `Requests Received (${incoming.length})`],
-                ["sent", `Requests Sent (${sent.length})`],
-              ].map(([tab, label]) => (
-                <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={tabButtonStyle(activeTab === tab)}>{label}</button>
-              ))}
-            </div>
-            {renderNetwork()}
-          </section>
+              return (
+                <div key={badge.title} style={{ padding: "0.9rem", borderRadius: "12px", border: complete ? "1px solid rgba(16,185,129,0.35)" : "1px solid var(--color-border)", backgroundColor: complete ? "rgba(16,185,129,0.1)" : "var(--color-subtle)", opacity: complete ? 1 : 0.82 }}>
+                  <p style={{ margin: 0, color: complete ? "#10B981" : "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.72rem", fontWeight: 900 }}>
+                    {complete ? "UNLOCKED" : `${Math.min(badge.current, badge.target)}/${badge.target}`}
+                  </p>
+                  <h4 style={{ margin: "0.35rem 0 0", color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "0.98rem" }}>
+                    {badge.title}
+                  </h4>
+                  <p style={{ ...smallText, marginTop: "0.3rem" }}>{badge.detail}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", alignItems: "start" }}>
+        <div style={{ ...panelStyle, display: "grid", gap: "1rem" }}>
+          <div>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: "0.25rem" }}>Weekly Activity</h3>
+            <p style={smallText}>Completed tasks and focus sessions from the last 7 days.</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(34px, 1fr))", gap: "0.55rem", alignItems: "end", minHeight: "180px" }}>
+            {weeklyActivity.map((day) => {
+              const total = day.tasks + day.focus;
+              const maxTotal = Math.max(1, ...weeklyActivity.map((item) => item.tasks + item.focus));
+              const height = Math.max(total ? 28 : 8, (total / maxTotal) * 126);
+
+              return (
+                <div key={day.key} style={{ display: "grid", gap: "0.45rem", alignItems: "end", minWidth: 0 }}>
+                  <div style={{ height: "132px", display: "flex", alignItems: "end", justifyContent: "center", borderRadius: "12px", backgroundColor: "var(--color-subtle)", padding: "0.35rem" }}>
+                    <div
+                      title={`${day.tasks} tasks, ${day.focus} focus sessions`}
+                      style={{
+                        width: "100%",
+                        height: `${height}px`,
+                        borderRadius: "9px",
+                        background: total ? "linear-gradient(180deg, #5B8CFF, #10B981)" : "rgba(148,163,184,0.25)",
+                        transition: "height 0.2s ease",
+                      }}
+                    />
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <p style={{ margin: 0, color: "var(--color-foreground)", fontFamily: "var(--font-body)", fontSize: "0.78rem", fontWeight: 800 }}>{total}</p>
+                    <p style={{ ...smallText, fontSize: "0.72rem" }}>{day.label}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap" }}>
+            <span style={{ ...smallText, display: "inline-flex", alignItems: "center", gap: "0.35rem" }}><span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#5B8CFF" }} />Tasks</span>
+            <span style={{ ...smallText, display: "inline-flex", alignItems: "center", gap: "0.35rem" }}><span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#10B981" }} />Focus</span>
+          </div>
+        </div>
+
+        <div style={{ ...panelStyle, display: "grid", gap: "0.85rem" }}>
+          <div>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: "0.25rem" }}>Achievement Progress</h3>
+            <p style={smallText}>Progress toward your next profile milestones.</p>
+          </div>
+          <div style={{ display: "grid", gap: "0.75rem" }}>
+            {achievementBadges.map((badge) => {
+              const progress = Math.min(100, Math.round((badge.current / badge.target) * 100));
+              const complete = progress >= 100;
+
+              return (
+                <div key={badge.title} style={{ padding: "0.9rem", borderRadius: "12px", border: complete ? "1px solid rgba(16,185,129,0.35)" : "1px solid var(--color-border)", backgroundColor: complete ? "rgba(16,185,129,0.1)" : "var(--color-subtle)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "start" }}>
+                    <div>
+                      <h4 style={{ margin: 0, color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "0.98rem" }}>{badge.title}</h4>
+                      <p style={{ ...smallText, marginTop: "0.25rem" }}>{badge.detail}</p>
+                    </div>
+                    <strong style={{ color: complete ? "#10B981" : "var(--color-primary)", fontFamily: "var(--font-body)", fontSize: "0.82rem", flexShrink: 0 }}>
+                      {Math.min(badge.current, badge.target)}/{badge.target}
+                    </strong>
+                  </div>
+                  <div style={{ height: "8px", borderRadius: "999px", backgroundColor: "rgba(148,163,184,0.22)", overflow: "hidden", marginTop: "0.75rem" }}>
+                    <div style={{ width: `${progress}%`, height: "100%", borderRadius: "999px", background: complete ? "#10B981" : "linear-gradient(135deg, #5B8CFF, #7C5CFF)" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section style={panelStyle}>
+        <h3 style={sectionTitleStyle}>Friend Management</h3>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+          {[
+            ["friends", `Friends (${friends.length})`],
+            ["received", `Requests Received (${incoming.length})`],
+            ["sent", `Requests Sent (${sent.length})`],
+          ].map(([tab, label]) => (
+            <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={tabButtonStyle(activeTab === tab)}>{label}</button>
+          ))}
+        </div>
+        {renderNetwork()}
+      </section>
       {crop && (
         <div
           role="presentation"
@@ -888,25 +981,6 @@ export default function Profile({ onNotify }) {
     </div>
   );
 
-  function Field({ label, children }) {
-    return (
-      <div>
-        <label style={labelStyle}>{label}</label>
-        {children}
-      </div>
-    );
-  }
-
-  // Enhanced field with optional hint text
-  function FieldWithHint({ label, hint, children }) {
-    return (
-      <div>
-        <label style={labelStyle}>{label}</label>
-        {children}
-        {hint && <p style={{ ...smallText, marginTop: "0.45rem" }}>{hint}</p>}
-      </div>
-    );
-  }
 }
 
 const sectionTitleStyle = {

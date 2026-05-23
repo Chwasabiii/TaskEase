@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "../ui/ThemeToggle";
+import ConfirmModal from "../ui/ConfirmModal";
 import { supabase } from "../../lib/supabase";
 
 export default function Navbar({
@@ -16,6 +17,7 @@ export default function Navbar({
 }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileQuery, setProfileQuery] = useState("");
   const [profileResults, setProfileResults] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
@@ -25,8 +27,11 @@ export default function Navbar({
   const [loadingSelectedProfile, setLoadingSelectedProfile] = useState(false);
   const [searchingProfiles, setSearchingProfiles] = useState(false);
   const [requestingProfileId, setRequestingProfileId] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(null);
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const notificationRef = useRef(null);
   const searchRef = useRef(null);
+  const settingsRef = useRef(null);
 
   const pageLabels = {
     dashboard: "Dashboard",
@@ -36,10 +41,11 @@ export default function Navbar({
     focus: "Focus Mode",
     collaboration: "Collaboration",
     profile: "Profile",
+    privacy: "Privacy",
   };
 
   useEffect(() => {
-    if (!notificationsOpen && !searchOpen) return undefined;
+    if (!notificationsOpen && !searchOpen && !settingsOpen && !signOutConfirmOpen) return undefined;
 
     const handlePointerDown = (event) => {
       if (!notificationRef.current?.contains(event.target)) {
@@ -48,11 +54,17 @@ export default function Navbar({
       if (!searchRef.current?.contains(event.target)) {
         setSearchOpen(false);
       }
+      if (!settingsRef.current?.contains(event.target)) {
+        setSettingsOpen(false);
+      }
     };
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
         setNotificationsOpen(false);
+        setSearchOpen(false);
+        setSettingsOpen(false);
+        setSignOutConfirmOpen(false);
       }
     };
 
@@ -63,7 +75,42 @@ export default function Navbar({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [notificationsOpen, searchOpen]);
+  }, [notificationsOpen, searchOpen, settingsOpen]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    const loadCurrentProfile = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, email, username, full_name, avatar_url, show_bio, show_friends, show_stats, is_discoverable")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (isMounted) {
+        setCurrentProfile(data || null);
+      }
+    };
+
+    const handleProfileUpdated = (event) => {
+      const updatedProfile = event.detail?.profile;
+      if (updatedProfile?.id === user.id) {
+        setCurrentProfile((current) => ({ ...current, ...updatedProfile }));
+      }
+    };
+
+    loadCurrentProfile();
+    window.addEventListener("taskease:profile-updated", handleProfileUpdated);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("taskease:profile-updated", handleProfileUpdated);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     const searchTerm = profileQuery.trim().replace(/[%_,()]/g, "");
@@ -275,11 +322,53 @@ export default function Navbar({
   };
 
   const getInitial = (profile) =>
-    (profile?.full_name || profile?.username || "U")[0]?.toUpperCase();
+    (profile?.full_name || profile?.username || profile?.email || "U")[0]?.toUpperCase();
+
+  const navbarProfile = {
+    email: user?.email || "",
+    username: user?.email?.split("@")[0] || "",
+    full_name: user?.user_metadata?.full_name || "",
+    avatar_url: "",
+    show_bio: true,
+    show_friends: true,
+    show_stats: true,
+    is_discoverable: true,
+    ...currentProfile,
+  };
+
+  const handleConfirmSignOut = () => {
+    setSettingsOpen(false);
+    setSignOutConfirmOpen(true);
+  };
+
+  const handleSignOut = () => {
+    setSignOutConfirmOpen(false);
+    onSignOut?.();
+  };
+
+  const openProfileSettings = (section = "edit") => {
+    setSettingsOpen(false);
+    setActivePage?.(section === "privacy" ? "privacy" : "profile");
+  };
+
+  const settingsMenuButtonStyle = {
+    width: "100%",
+    border: "none",
+    borderRadius: "10px",
+    backgroundColor: "transparent",
+    color: "var(--color-foreground)",
+    fontFamily: "var(--font-body)",
+    fontSize: "0.86rem",
+    fontWeight: 700,
+    padding: "0.7rem 0.75rem",
+    textAlign: "left",
+    cursor: "pointer",
+  };
 
   return (
     <>
     <header
+      className="app-navbar"
       style={{
         height: "64px",
         backgroundColor: "var(--color-surface)",
@@ -295,6 +384,7 @@ export default function Navbar({
       }}
     >
       <h1
+        className="app-navbar-title"
         style={{
           fontFamily: "var(--font-heading)",
           fontSize: "1.25rem",
@@ -305,12 +395,12 @@ export default function Navbar({
         {pageLabels[activePage] || "TaskEase"}
       </h1>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      <div className="app-navbar-actions" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <ThemeToggle />
 
-        <div ref={searchRef} style={{ position: "relative" }}>
+        <div ref={searchRef} className="app-navbar-search" style={{ position: "relative" }}>
           <div
-            className="interactive-pop"
+            className="interactive-pop app-navbar-search-box"
             style={{
               display: "flex",
               alignItems: "center",
@@ -349,6 +439,7 @@ export default function Navbar({
 
           {searchOpen && (
             <div
+              className="app-navbar-search-menu"
               style={{
                 position: "absolute",
                 right: 0,
@@ -510,7 +601,7 @@ export default function Navbar({
           )}
         </div>
 
-        <div ref={notificationRef} style={{ position: "relative" }}>
+        <div ref={notificationRef} className="app-navbar-menu-wrap" style={{ position: "relative" }}>
           <button
             className="interactive-pop"
             onClick={() => setNotificationsOpen((current) => !current)}
@@ -603,7 +694,7 @@ export default function Navbar({
 
           {notificationsOpen && (
             <div
-              className="notification-menu"
+              className="notification-menu app-navbar-dropdown"
               style={{
                 position: "absolute",
                 right: 0,
@@ -725,12 +816,12 @@ export default function Navbar({
         <button
           type="button"
           onClick={() => setActivePage?.("profile")}
-          title="Open profile"
+          title={navbarProfile.full_name || navbarProfile.username || "Open profile"}
           style={{
             width: "38px",
             height: "38px",
             borderRadius: "10px",
-            background: "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
+            background: navbarProfile.avatar_url ? "var(--color-surface)" : "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
             border: "none",
             display: "flex",
             alignItems: "center",
@@ -740,39 +831,89 @@ export default function Navbar({
             fontSize: "0.9rem",
             color: "var(--color-on-primary)",
             cursor: "pointer",
+            overflow: "hidden",
+            padding: 0,
           }}
         >
-          {user?.email?.[0].toUpperCase() ?? "U"}
+          {navbarProfile.avatar_url ? (
+            <img
+              src={navbarProfile.avatar_url}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            getInitial(navbarProfile)
+          )}
         </button>
 
-        <button
-          className="interactive-pop"
-          onClick={onSignOut}
-          style={{
-            padding: "0.4rem 0.875rem",
-            borderRadius: "10px",
-            border: "1px solid var(--color-border)",
-            backgroundColor: "var(--color-surface)",
-            color: "var(--color-muted)",
-            fontFamily: "var(--font-body)",
-            fontSize: "0.8rem",
-            cursor: "pointer",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "rgba(239,68,68,0.1)";
-            e.currentTarget.style.color = "#EF4444";
-            e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-surface)";
-            e.currentTarget.style.color = "var(--color-muted)";
-            e.currentTarget.style.borderColor = "var(--color-border)";
-          }}
-        >
-          Sign out
-        </button>
+        <div ref={settingsRef} className="app-navbar-menu-wrap" style={{ position: "relative" }}>
+          <button
+            className="interactive-pop"
+            type="button"
+            onClick={() => setSettingsOpen((open) => !open)}
+            aria-expanded={settingsOpen}
+            aria-haspopup="menu"
+            style={{
+              padding: "0.4rem 0.875rem",
+              borderRadius: "10px",
+              border: settingsOpen ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
+              backgroundColor: "var(--color-surface)",
+              color: "var(--color-muted)",
+              fontFamily: "var(--font-body)",
+              fontSize: "0.8rem",
+              cursor: "pointer",
+            }}
+          >
+            Settings
+          </button>
+
+          {settingsOpen && (
+            <div
+              role="menu"
+              className="app-navbar-settings-menu"
+              style={{
+                position: "absolute",
+                right: 0,
+                top: "calc(100% + 0.75rem)",
+                width: "240px",
+                maxWidth: "calc(100vw - 2rem)",
+                borderRadius: "16px",
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-surface-strong)",
+                boxShadow: "0 22px 60px rgba(15, 23, 42, 0.28)",
+                padding: "0.45rem",
+              }}
+            >
+              <button type="button" role="menuitem" onClick={() => openProfileSettings("edit")} style={settingsMenuButtonStyle}>
+                Edit profile
+              </button>
+              <button type="button" role="menuitem" onClick={() => openProfileSettings("privacy")} style={settingsMenuButtonStyle}>
+                Privacy
+              </button>
+              <div style={{ height: "1px", backgroundColor: "var(--color-border)", margin: "0.35rem 0" }} />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleConfirmSignOut}
+                style={{ ...settingsMenuButtonStyle, color: "#EF4444" }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
+    {signOutConfirmOpen && (
+      <ConfirmModal
+        title="Confirm sign out"
+        message="Are you sure you want to sign out of TaskEase? You can always log back in later."
+        confirmLabel="Sign out"
+        cancelLabel="Stay signed in"
+        onConfirm={handleSignOut}
+        onClose={() => setSignOutConfirmOpen(false)}
+      />
+    )}
     {selectedProfile && (
       <div
         role="dialog"
@@ -790,7 +931,7 @@ export default function Navbar({
           if (event.target === event.currentTarget) setSelectedProfile(null);
         }}
       >
-        <div className="glass-card" style={{ width: "min(840px, 100%)", maxHeight: "88vh", overflowY: "auto", padding: 0, borderRadius: "16px" }}>
+        <div className="glass-card profile-preview-modal" style={{ width: "min(840px, 100%)", maxHeight: "88vh", overflowY: "auto", padding: 0, borderRadius: "16px" }}>
           <div style={{ height: "190px", borderRadius: "16px 16px 0 0", background: selectedProfile.cover_url ? `linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.5)), url(${selectedProfile.cover_url}) center/cover` : "linear-gradient(135deg, rgba(16,185,129,0.78), rgba(91,140,255,0.9))" }} />
           <div style={{ padding: "0 1.5rem 1.5rem", marginTop: "-42px" }}>
             <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
@@ -831,7 +972,7 @@ export default function Navbar({
             {loadingSelectedProfile ? (
               <p style={{ margin: "1rem 0 0", color: "var(--color-muted)", fontFamily: "var(--font-body)", fontSize: "0.9rem" }}>Loading profile...</p>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 260px", gap: "1rem", marginTop: "1rem" }}>
+              <div className="profile-preview-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 260px", gap: "1rem", marginTop: "1rem" }}>
                 <div style={{ display: "grid", gap: "1rem" }}>
                   <section style={{ padding: "1rem", borderRadius: "12px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-subtle)" }}>
                     <h3 style={{ margin: "0 0 0.65rem", color: "var(--color-foreground)", fontFamily: "var(--font-heading)", fontSize: "1rem" }}>About</h3>
