@@ -8,7 +8,7 @@ export default function PomodoroControls({
   saving,
 }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", justifyContent: "center" }}>
+    <div className="pomodoro-controls" style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", justifyContent: "center" }}>
       <button
         type="button"
         onClick={onStartPause}

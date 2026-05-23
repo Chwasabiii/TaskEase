@@ -432,7 +432,7 @@ export default function Navbar({
               border: searchOpen ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
               borderRadius: "10px",
               padding: "0.35rem 0.75rem",
-              width: "280px",
+              width: "min(280px, 100%)",
             }}
           >
             <span style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-muted)", fontWeight: 700 }}>

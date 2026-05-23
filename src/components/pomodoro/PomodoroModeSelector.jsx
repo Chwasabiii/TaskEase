@@ -1,6 +1,6 @@
 export default function PomodoroModeSelector({ modes, activeMode, onSelectMode }) {
   return (
-    <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+    <div className="pomodoro-mode-selector" style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
       {modes.map((item) => {
         const active = item.id === activeMode;
         return (

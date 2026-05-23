@@ -183,7 +183,7 @@ export default function Pomodoro({ onNotify }) {
   const progress = Math.round(((currentMode.minutes * 60 - secondsLeft) / (currentMode.minutes * 60)) * 100);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div className="pomodoro-page" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <div>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.75rem", fontWeight: 700, color: "var(--color-foreground)", marginBottom: "0.25rem" }}>
           Pomodoro Timer
@@ -193,8 +193,8 @@ export default function Pomodoro({ onNotify }) {
         </p>
       </div>
 
-      <div className="page-split">
-        <div className="glass-card" style={{ padding: "1.5rem" }}>
+      <div className="page-split pomodoro-split" style={{ width: "100%", alignItems: "start" }}>
+        <div className="glass-card pomodoro-main-card" style={{ padding: "1.5rem", width: "100%", maxWidth: "100%" }}>
           <PomodoroModeSelector modes={MODES} activeMode={mode} onSelectMode={setMode} />
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", padding: "1.5rem", borderRadius: "20px", backgroundColor: "var(--color-subtle)" }}>
@@ -270,8 +270,8 @@ export default function Pomodoro({ onNotify }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          <div className="glass-card" style={{ padding: "1.5rem" }}>
+        <div className="pomodoro-sidebar" style={{ display: "flex", flexDirection: "column", gap: "1.5rem", width: "100%" }}>
+          <div className="glass-card pomodoro-sidebar-card" style={{ padding: "1.5rem" }}>
             <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.05rem", fontWeight: 700, color: "var(--color-foreground)", marginBottom: "0.35rem" }}>
               Alarm Sound
             </h3>
@@ -329,7 +329,7 @@ export default function Pomodoro({ onNotify }) {
             </div>
           </div>
 
-          <div className="glass-card" style={{ padding: "1.5rem" }}>
+          <div className="glass-card pomodoro-sidebar-card" style={{ padding: "1.5rem" }}>
             <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.05rem", fontWeight: 700, color: "var(--color-foreground)", marginBottom: "1rem" }}>
               Recent Pomodoro Sessions
             </h3>
