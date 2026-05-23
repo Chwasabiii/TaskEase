@@ -181,8 +181,8 @@ export default function Collaboration({ selectedTaskId }) {
 
         {/* Left panel — task list */}
         <div style={{
-          width: "280px", flexShrink: 0,
           display: "flex", flexDirection: "column", gap: "1rem",
+          minWidth: 280, maxWidth: 380, width: "100%",
         }}>
           {/* Tabs */}
           <div style={{

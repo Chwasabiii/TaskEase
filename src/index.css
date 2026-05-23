@@ -583,14 +583,16 @@
   display: none;
 }
 
-.page-split {
+.page-split,
+.page-sidebar-split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
   gap: 1.5rem;
   width: 100%;
 }
 
-.page-split > * {
+.page-split > *,
+.page-sidebar-split > * {
   min-width: 0;
   width: 100%;
 }
