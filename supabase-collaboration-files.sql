@@ -361,6 +361,7 @@ for insert
 to authenticated
 with check (
   bucket_id = 'task-files'
+  and public.can_access_task((storage.foldername(name))[1]::uuid)
 );
 
 create policy "task_files_storage_update"

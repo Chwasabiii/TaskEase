@@ -564,10 +564,6 @@
   transition: transform 0.25s ease, width var(--motion-spring);
 }
 
-.app-sidebar.mobile-hidden {
-  transform: translateX(-100%);
-}
-
 .app-sidebar.mobile-open {
   transform: translateX(0);
 }
