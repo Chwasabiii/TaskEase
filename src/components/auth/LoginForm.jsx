@@ -1,4 +1,6 @@
-    import { Button, TextInput } from "../ui";
+import { useState } from "react";
+import { Button, TextInput } from "../ui";
+import PasswordToggleButton from "./PasswordToggleButton";
 
 export default function LoginForm({
   email,
@@ -12,6 +14,8 @@ export default function LoginForm({
   onSwitchToRegister,
   onForgotPassword,
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {error && (
@@ -34,11 +38,19 @@ export default function LoginForm({
       />
       <TextInput
         label="Password"
-        type="password"
+        type={showPassword ? "text" : "password"}
         value={password}
         onChange={onPasswordChange}
         placeholder="••••••••"
         required
+        inputStyle={{ paddingRight: "3.15rem" }}
+        action={
+          <PasswordToggleButton
+            visible={showPassword}
+            onToggle={() => setShowPassword((current) => !current)}
+            label={showPassword ? "Hide password" : "Show password"}
+          />
+        }
       />
       <Button
         type="submit"

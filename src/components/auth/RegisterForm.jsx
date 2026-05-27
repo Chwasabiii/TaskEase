@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Button, TextInput } from "../ui";
+import PasswordToggleButton from "./PasswordToggleButton";
 
 export default function RegisterForm({
   fullName,
@@ -16,6 +18,9 @@ export default function RegisterForm({
   onResendConfirmation,
   onSwitchToLogin,
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {error && (
@@ -46,19 +51,35 @@ export default function RegisterForm({
       />
       <TextInput
         label="Password"
-        type="password"
+        type={showPassword ? "text" : "password"}
         value={password}
         onChange={onPasswordChange}
         placeholder="Ex. Min. 8 characters"
         required
+        inputStyle={{ paddingRight: "3.15rem" }}
+        action={
+          <PasswordToggleButton
+            visible={showPassword}
+            onToggle={() => setShowPassword((current) => !current)}
+            label={showPassword ? "Hide password" : "Show password"}
+          />
+        }
       />
       <TextInput
         label="Confirm Password"
-        type="password"
+        type={showConfirmPassword ? "text" : "password"}
         value={confirmPassword}
         onChange={onConfirmPasswordChange}
         placeholder="Re-enter your password"
         required
+        inputStyle={{ paddingRight: "3.15rem" }}
+        action={
+          <PasswordToggleButton
+            visible={showConfirmPassword}
+            onToggle={() => setShowConfirmPassword((current) => !current)}
+            label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+          />
+        }
       />
       <Button
         type="submit"
