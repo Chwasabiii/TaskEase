@@ -32,6 +32,13 @@ const getRecorderMimeType = () => {
   return options.find((type) => window.MediaRecorder?.isTypeSupported(type)) || "";
 };
 
+const getAudioFileName = (type) => {
+  if (type.includes("mp4")) return "voice-command.mp4";
+  if (type.includes("mpeg")) return "voice-command.mp3";
+  if (type.includes("wav")) return "voice-command.wav";
+  return "voice-command.webm";
+};
+
 const readTranscriptionResponse = async (response) => {
   const bodyText = await response.text();
 
@@ -105,7 +112,7 @@ export function useVoiceRecognition({ onResult }) {
 
     try {
       const formData = new FormData();
-      formData.append("file", blob, "voice-command.webm");
+      formData.append("file", blob, getAudioFileName(blob.type || "audio/webm"));
 
       const response = await fetch("/api/transcribe", {
         method: "POST",
