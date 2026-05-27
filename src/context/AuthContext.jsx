@@ -1,28 +1,20 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { clearStoredSupabaseSession, isInvalidRefreshTokenError, supabase } from "../lib/supabase";
 
 const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const isInvalidRefreshTokenError = (error) =>
-    error?.message?.toLowerCase().includes("invalid refresh token");
-
-  const clearStoredSupabaseSession = () => {
-    Object.keys(localStorage)
-      .filter((key) => key.startsWith("sb-") && key.endsWith("-auth-token"))
-      .forEach((key) => localStorage.removeItem(key));
-  };
+  const [sessionNotice, setSessionNotice] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
     // Get initial session
     const initializeSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session } = {}, error } = await supabase.auth.getSession();
 
       if (!isMounted) return;
 
@@ -30,8 +22,10 @@ export function AuthProvider({ children }) {
         clearStoredSupabaseSession();
         await supabase.auth.signOut({ scope: "local" });
         setUser(null);
+        setSessionNotice("Your session expired. Please sign in again.");
       } else {
         setUser(session?.user ?? null);
+        setSessionNotice("");
       }
 
       setLoading(false);
@@ -43,6 +37,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setUser(session?.user ?? null);
+        if (session) setSessionNotice("");
         setLoading(false);
       }
     );
@@ -75,6 +70,7 @@ export function AuthProvider({ children }) {
       email: email.trim().toLowerCase(),
       password,
     });
+    if (!error) setSessionNotice("");
     return { data, error };
   };
 
@@ -100,10 +96,11 @@ export function AuthProvider({ children }) {
       clearStoredSupabaseSession();
       await supabase.auth.signOut({ scope: "local" });
     }
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, resetPassword, signOut, resendConfirmation }}>
+    <AuthContext.Provider value={{ user, loading, sessionNotice, signUp, signIn, resetPassword, signOut, resendConfirmation }}>
       {children}
     </AuthContext.Provider>
   );

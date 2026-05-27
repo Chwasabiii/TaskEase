@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { AuthShell, LoginForm, ForgotPasswordForm } from "../components/auth";
 
 export default function Login({ onSwitchToRegister }) {
-  const { signIn, resetPassword, resendConfirmation } = useAuth();
+  const { signIn, resetPassword, resendConfirmation, sessionNotice } = useAuth();
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
@@ -111,7 +111,7 @@ export default function Login({ onSwitchToRegister }) {
           onSubmit={handleResetPassword}
           loading={loading}
           error={error}
-          notice={notice}
+          notice={notice || sessionNotice}
           onBackToLogin={handleBackToLogin}
         />
       ) : (
