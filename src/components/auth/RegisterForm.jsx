@@ -4,10 +4,13 @@ import PasswordToggleButton from "./PasswordToggleButton";
 
 export default function RegisterForm({
   fullName,
+  username,
+  usernameStatus,
   email,
   password,
   confirmPassword,
   onFullNameChange,
+  onUsernameChange,
   onEmailChange,
   onPasswordChange,
   onConfirmPasswordChange,
@@ -41,6 +44,37 @@ export default function RegisterForm({
         placeholder="Ex. John Doe"
         required
       />
+      <TextInput
+        label="Username"
+        type="text"
+        value={username}
+        onChange={(value) => onUsernameChange?.(value.toLowerCase().replace(/^@+/, ""))}
+        placeholder="Ex. johndoe"
+        required
+      />
+      {usernameStatus && usernameStatus !== "idle" && (
+        <p
+          aria-live="polite"
+          style={{
+            marginTop: "-0.65rem",
+            color:
+              usernameStatus === "available"
+                ? "#10B981"
+                : usernameStatus === "checking"
+                  ? "var(--color-muted)"
+                  : "#EF4444",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.8rem",
+            lineHeight: 1.4,
+          }}
+        >
+          {usernameStatus === "checking" && "Checking username..."}
+          {usernameStatus === "available" && "Username is available."}
+          {usernameStatus === "taken" && "Username is already taken."}
+          {usernameStatus === "invalid" && "Use 3-24 letters, numbers, periods, or underscores."}
+          {usernameStatus === "unavailable" && "Could not check username right now."}
+        </p>
+      )}
       <TextInput
         label="Email"
         type="email"

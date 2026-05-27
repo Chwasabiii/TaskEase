@@ -29,11 +29,11 @@ export default function LoginForm({
         </div>
       )}
       <TextInput
-        label="Email"
-        type="email"
+        label="Email or username"
+        type="text"
         value={email}
         onChange={onEmailChange}
-        placeholder="you@example.com"
+        placeholder="you@example.com or johndoe"
         required
       />
       <TextInput

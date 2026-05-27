@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const CATEGORIES = ["Work", "Personal", "Health", "Learning", "Finance", "Other"];
 
@@ -27,39 +27,95 @@ const getDateValue = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export default function TaskModal({ task, initialTask, onSave, onClose }) {
+export default function TaskModal({ task, initialTask, onSave, onClose, onFindArchivedSuggestion }) {
   const isEditing = !!task;
   const todayDateValue = getTodayDateValue();
 
   const [form, setForm] = useState({
-    title:       "",
+    title: "",
     description: "",
-    priority:    "medium",
-    category:    "",
-    due_date:    "",
-    due_time:    "",
-    status:      "todo",
+    priority: "medium",
+    category: "",
+    due_date: "",
+    due_time: "",
+    status: "todo",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
+  const [suggestion, setSuggestion] = useState(null);
+  const [checkingSuggestion, setCheckingSuggestion] = useState(false);
 
   useEffect(() => {
     if (task || initialTask) {
       const sourceTask = task || initialTask;
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
-        title:       sourceTask.title || "",
+        title: sourceTask.title || "",
         description: sourceTask.description || "",
-        priority:    sourceTask.priority || "medium",
-        category:    sourceTask.category || "",
-        due_date:    sourceTask.due_date ? getDateValue(sourceTask.due_date) : "",
-        due_time:    sourceTask.due_date ? getTimeValue(sourceTask.due_date) : "",
-        status:      sourceTask.status || "todo",
+        priority: sourceTask.priority || "medium",
+        category: sourceTask.category || "",
+        due_date: sourceTask.due_date ? getDateValue(sourceTask.due_date) : "",
+        due_time: sourceTask.due_date ? getTimeValue(sourceTask.due_date) : "",
+        status: sourceTask.status || "todo",
       });
     }
   }, [initialTask, task]);
 
-  const handleSave = async () => {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !loading) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [loading, onClose]);
+
+  useEffect(() => {
+    if (isEditing || !onFindArchivedSuggestion) return undefined;
+
+    const cleanTitle = form.title.trim();
+    if (cleanTitle.length < 3) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSuggestion(null);
+      setCheckingSuggestion(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setCheckingSuggestion(true);
+
+    const timeoutId = window.setTimeout(async () => {
+      const archivedSuggestion = await onFindArchivedSuggestion(cleanTitle);
+      if (cancelled) return;
+      setSuggestion(archivedSuggestion);
+      setCheckingSuggestion(false);
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [form.title, isEditing, onFindArchivedSuggestion]);
+
+  const applySuggestion = () => {
+    if (!suggestion) return;
+
+    setForm((current) => ({
+      ...current,
+      title: suggestion.title || current.title,
+      description: suggestion.description || "",
+      priority: suggestion.priority || "medium",
+      category: suggestion.category || "",
+      status: "todo",
+    }));
+    setSuggestion(null);
+  };
+
+  const handleSave = async (event) => {
+    event?.preventDefault();
+    if (loading) return;
     if (!form.title.trim()) return setError("Title is required.");
     if (form.due_date && form.due_date < todayDateValue) {
       return setError("Due date cannot be in the past.");
@@ -84,243 +140,194 @@ export default function TaskModal({ task, initialTask, onSave, onClose }) {
       ...taskPayload,
       due_date: dueDateTime ? dueDateTime.toISOString() : null,
     };
-    const { error } = await onSave(payload);
-    if (error) setError(error.message);
-    else onClose();
-    setLoading(false);
+
+    try {
+      const { error: saveError } = await onSave(payload);
+      if (saveError) setError(saveError.message);
+      else onClose();
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const inputStyle = {
-    width: "100%",
-    padding: "0.7rem 1rem",
-    borderRadius: "10px",
-    border: "1px solid var(--color-border)",
-    backgroundColor: "var(--color-hover)",
-    color: "var(--color-foreground)",
-    fontFamily: "var(--font-body)",
-    fontSize: "0.9rem",
-    outline: "none",
-    transition: "border 0.2s",
-  };
-
-  const labelStyle = {
-    display: "block",
-    fontFamily: "var(--font-body)",
-    fontSize: "0.8rem",
-    fontWeight: 500,
-    color: "var(--color-muted)",
-    marginBottom: "0.35rem",
-  };
+  const updateForm = (updates) => setForm((current) => ({ ...current, ...updates }));
 
   return (
     <div
-      style={{
-        position: "fixed", inset: 0,
-        backgroundColor: "var(--color-overlay)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 100,
-        padding: "1rem",
-      }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="task-modal-title"
+      className="task-modal-overlay"
+      onClick={(event) => event.target === event.currentTarget && !loading && onClose()}
     >
-      <div
-        className="glass-card task-modal-panel"
-        style={{ width: "100%", maxWidth: "500px", padding: "2rem" }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.25rem", fontWeight: 700, color: "var(--color-foreground)" }}>
-            {isEditing ? "Edit Task" : initialTask ? "Review Voice Task" : "New Task"}
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              width: "32px", height: "32px",
-              borderRadius: "8px",
-              border: "1px solid var(--color-border)",
-              backgroundColor: "transparent",
-              color: "var(--color-muted)",
-              cursor: "pointer",
-              fontSize: "1rem",
-            }}
-          >
-            ✕
+      <form className="task-modal-panel" onSubmit={handleSave}>
+        <div className="task-modal-header">
+          <div>
+            <h2 id="task-modal-title" className="task-modal-title">
+              {isEditing ? "Edit Task" : initialTask ? "Review Voice Task" : "New Task"}
+            </h2>
+            <p className="task-modal-subtitle">
+              {isEditing
+                ? "Update task details and schedule."
+                : initialTask
+                ? "Review the voice suggestion and save it as a new task."
+                : "Create a focused task with priority, category, and due date."
+              }
+            </p>
+          </div>
+          <button type="button" onClick={onClose} disabled={loading} aria-label="Close task modal" className="task-modal-close">
+            ×
           </button>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div style={{
-            backgroundColor: "rgba(239,68,68,0.1)",
-            border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: "10px",
-            padding: "0.75rem 1rem",
-            marginBottom: "1rem",
-            color: "#EF4444",
-            fontFamily: "var(--font-body)",
-            fontSize: "0.85rem",
-          }}>
-            {error}
-          </div>
-        )}
+        <div className="task-modal-body">
+          {error && <div className="task-modal-error">{error}</div>}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {/* Title */}
-          <div>
-            <label style={labelStyle}>Title *</label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="What needs to be done?"
-              style={inputStyle}
-              onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-              onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-              autoFocus
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label style={labelStyle}>Description</label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Add more details..."
-              rows={3}
-              style={{ ...inputStyle, resize: "vertical" }}
-              onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-              onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-            />
-          </div>
-
-          {/* Priority + Status row */}
-          <div className="task-form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="task-modal-fieldset">
             <div>
-              <label style={labelStyle}>Priority</label>
-              <select
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                style={{ ...inputStyle, cursor: "pointer" }}
-                onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-              >
-                <option value="low">🟢 Low</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="high">🔴 High</option>
-                <option value="urgent">🟣 Urgent</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Status</label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                style={{ ...inputStyle, cursor: "pointer" }}
-                onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-              >
-                <option value="todo">📋 To Do</option>
-                <option value="in_progress">⚡ In Progress</option>
-                <option value="done">✅ Done</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Category + Due date row */}
-          <div className="task-form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-            <div>
-              <label style={labelStyle}>Category</label>
-              <select
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                style={{ ...inputStyle, cursor: "pointer" }}
-                onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-              >
-                <option value="">No category</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Due Date</label>
+              <label htmlFor="task-title" className="task-modal-label">Title *</label>
               <input
-                type="date"
-                value={form.due_date}
-                min={todayDateValue}
-                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                style={inputStyle}
-                onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-                onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
+                id="task-title"
+                type="text"
+                value={form.title}
+                onChange={(event) => updateForm({ title: event.target.value })}
+                placeholder="What needs to be done?"
+                className="task-modal-input"
+                autoFocus
+              />
+            </div>
+
+            {!isEditing && (suggestion || checkingSuggestion) && (
+              <div className="task-modal-help">
+                {checkingSuggestion ? (
+                  <p style={{ margin: 0 }}>Checking completed tasks for reusable task details…</p>
+                ) : (
+                  <>
+                    <p style={{ margin: 0, fontWeight: 700, color: "var(--color-foreground)" }}>
+                      Reuse a completed task?
+                    </p>
+                    <p style={{ margin: "0.45rem 0 0", color: "var(--color-muted)", fontSize: "0.92rem", lineHeight: 1.6 }}>
+                      We found "{suggestion.title}" in your archive. Reuse its details and choose a new date.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={applySuggestion}
+                      className="task-modal-button-secondary"
+                      style={{ width: "fit-content", borderColor: "rgba(91, 140, 255, 0.45)", backgroundColor: "rgba(91, 140, 255, 0.12)", color: "#5b8cff" }}
+                    >
+                      Use this template
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="task-modal-fieldset">
+            <div>
+              <label htmlFor="task-description" className="task-modal-label">Description</label>
+              <textarea
+                id="task-description"
+                value={form.description}
+                onChange={(event) => updateForm({ description: event.target.value })}
+                placeholder="Add more details..."
+                className="task-modal-input task-modal-textarea"
               />
             </div>
           </div>
 
-          <div>
-            <label style={labelStyle}>Due Time</label>
-            <input
-              type="time"
-              value={form.due_time}
-              disabled={!form.due_date}
-              onChange={(e) => setForm({ ...form, due_time: e.target.value })}
-              style={{
-                ...inputStyle,
-                opacity: form.due_date ? 1 : 0.65,
-                cursor: form.due_date ? "text" : "not-allowed",
-              }}
-              onFocus={(e) => e.target.style.borderColor = "#5B8CFF"}
-              onBlur={(e) => e.target.style.borderColor = "var(--color-border)"}
-            />
+          <div className="task-modal-fieldset">
+            <p className="task-modal-fieldset-title">Task details</p>
+            <div className="task-modal-grid">
+              <div>
+                <label htmlFor="task-priority" className="task-modal-label">Priority</label>
+                <select
+                  id="task-priority"
+                  value={form.priority}
+                  onChange={(event) => updateForm({ priority: event.target.value })}
+                  className="task-modal-input"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="task-status" className="task-modal-label">Status</label>
+                <select
+                  id="task-status"
+                  value={form.status}
+                  onChange={(event) => updateForm({ status: event.target.value })}
+                  className="task-modal-input"
+                >
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="task-category" className="task-modal-label">Category</label>
+                <select
+                  id="task-category"
+                  value={form.category}
+                  onChange={(event) => updateForm({ category: event.target.value })}
+                  className="task-modal-input"
+                >
+                  <option value="">No category</option>
+                  {CATEGORIES.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="task-due-date" className="task-modal-label">Due Date</label>
+                <input
+                  id="task-due-date"
+                  type="date"
+                  value={form.due_date}
+                  min={todayDateValue}
+                  onChange={(event) => updateForm({ due_date: event.target.value })}
+                  className="task-modal-input"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Buttons */}
-          <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
-            <button
-              onClick={onClose}
-              style={{
-                flex: 1,
-                padding: "0.75rem",
-                borderRadius: "10px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "transparent",
-                color: "var(--color-muted)",
-                fontFamily: "var(--font-body)",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              style={{
-                flex: 2,
-                padding: "0.75rem",
-                borderRadius: "10px",
-                border: "none",
-                background: loading
-                  ? "rgba(91,140,255,0.5)"
-                  : "linear-gradient(135deg, #5B8CFF, #7C5CFF)",
-                color: "white",
-                fontFamily: "var(--font-body)",
-                fontWeight: 600,
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "all 0.2s",
-              }}
-            >
-              {loading ? "Saving..." : isEditing ? "Save Changes" : "Create Task"}
-            </button>
+          <div className="task-modal-fieldset">
+            <p className="task-modal-fieldset-title">Schedule</p>
+            <div className="task-modal-grid">
+              <div>
+                <label htmlFor="task-due-time" className="task-modal-label">Due Time</label>
+                <input
+                  id="task-due-time"
+                  type="time"
+                  value={form.due_time}
+                  disabled={!form.due_date}
+                  onChange={(event) => updateForm({ due_time: event.target.value })}
+                  className="task-modal-input"
+                  style={{ opacity: form.due_date ? 1 : 0.65, cursor: form.due_date ? "text" : "not-allowed" }}
+                />
+              </div>
+              <div>
+                <p className="task-modal-label" style={{ visibility: "hidden", height: 0, marginBottom: 0 }}>Spacer</p>
+                <div className="task-modal-help" style={{ padding: "0.85rem 1rem" }}>
+                  Set a date first to enable a due time.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+
+        <div className="task-modal-footer">
+          <button type="button" onClick={onClose} disabled={loading} className="task-modal-button-secondary">
+            Cancel
+          </button>
+          <button type="submit" disabled={loading} className="task-modal-button-primary">
+            {loading ? "Saving..." : isEditing ? "Save Changes" : "Create Task"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
-

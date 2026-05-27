@@ -63,7 +63,7 @@ export function useTasks() {
       .insert([{ ...taskData, user_id: user.id }])
       .select("*, profiles(id, full_name, avatar_url)")
       .single();
-    if (!error) setTasks((prev) => [{ ...data, subtasks: [] }, ...prev]);
+    if (!error && !data.is_archived) setTasks((prev) => [{ ...data, subtasks: [] }, ...prev]);
     return { data, error };
   };
 
@@ -77,7 +77,9 @@ export function useTasks() {
       .single();
     if (!error) {
       setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...data, subtasks: t.subtasks || [] } : t))
+        data.is_archived
+          ? prev.filter((t) => t.id !== id)
+          : prev.map((t) => (t.id === id ? { ...data, subtasks: t.subtasks || [] } : t))
       );
     }
     return { data, error };
@@ -93,22 +95,47 @@ export function useTasks() {
   // Toggle complete
   const toggleComplete = async (id, currentStatus) => {
     const newStatus = currentStatus === "done" ? "todo" : "done";
-    return updateTask(id, { status: newStatus });
+    return updateTask(id, {
+      status: newStatus,
+      is_archived: newStatus === "done",
+    });
   };
 
   // Archive task
   const archiveTask = async (id) => {
     const { error } = await supabase
       .from("tasks")
-      .update({ is_archived: true })
+      .update({ is_archived: true, updated_at: new Date().toISOString() })
       .eq("id", id);
     if (!error) setTasks((prev) => prev.filter((t) => t.id !== id));
     return { error };
   };
 
+  const findArchivedTaskSuggestion = async (title) => {
+    const cleanTitle = title.trim().replace(/\s+/g, " ");
+    if (!user || cleanTitle.length < 3) return null;
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("is_archived", true)
+      .ilike("title", `%${cleanTitle}%`)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Could not fetch archived task suggestion:", error);
+      return null;
+    }
+
+    return data;
+  };
+
   return {
     tasks, loading, error,
     createTask, updateTask, deleteTask,
-    toggleComplete, archiveTask, fetchTasks,
+    toggleComplete, archiveTask, fetchTasks, findArchivedTaskSuggestion,
   };
 }

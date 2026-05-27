@@ -3,7 +3,7 @@ import { ThemeContext } from "./theme";
 
 const getInitialTheme = () => {
   if (typeof window === "undefined") {
-    return "dark";
+    return "light";
   }
 
   const storedTheme = localStorage.getItem("taskease-theme");
@@ -11,7 +11,7 @@ const getInitialTheme = () => {
     return storedTheme;
   }
 
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "light";
 };
 
 export function ThemeProvider({ children }) {

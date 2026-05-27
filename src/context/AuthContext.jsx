@@ -53,21 +53,41 @@ export function AuthProvider({ children }) {
 
   const getEmailRedirectTo = () => getAppUrl();
 
-  const signUp = async (email, password, fullName) => {
+  const normalizeUsername = (username) =>
+    username.trim().toLowerCase().replace(/^@+/, "");
+
+  const signUp = async (email, password, fullName, username) => {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
       options: {
         emailRedirectTo: getEmailRedirectTo(),
-        data: { full_name: fullName.trim() },
+        data: {
+          full_name: fullName.trim(),
+          username: normalizeUsername(username),
+        },
       },
     });
     return { data, error };
   };
 
-  const signIn = async (email, password) => {
+  const signIn = async (identifier, password) => {
+    const normalizedIdentifier = identifier.trim().toLowerCase();
+    const email = normalizedIdentifier.includes("@")
+      ? normalizedIdentifier
+      : await (async () => {
+          const { data, error } = await supabase.rpc("resolve_login_email", {
+            login_identifier: normalizeUsername(normalizedIdentifier),
+          });
+
+          if (error) throw error;
+          if (!data) throw new Error("Invalid email/username or password.");
+
+          return data;
+        })();
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email,
       password,
     });
     if (!error) setSessionNotice("");

@@ -22,6 +22,7 @@ export default function Tasks({ onNotify, voiceTaskDraft, onVoiceTaskDraftHandle
     tasks, loading,
     createTask, updateTask,
     deleteTask, toggleComplete, archiveTask,
+    findArchivedTaskSuggestion,
   } = useTasks();
   const [viewingTask, setViewingTask] = useState(null);
 
@@ -43,13 +44,19 @@ export default function Tasks({ onNotify, voiceTaskDraft, onVoiceTaskDraftHandle
 
   const handleSave = async (formData) => {
     const dueDateText = formatDueDateTime(formData.due_date);
+    const payload = {
+      ...formData,
+      is_archived: formData.status === "done",
+    };
 
     if (editingTask) {
-      const result = await updateTask(editingTask.id, formData);
+      const result = await updateTask(editingTask.id, payload);
       if (!result.error) {
         onNotify?.({
-          title: "Task updated",
-          message: dueDateText
+          title: payload.is_archived ? "Task completed" : "Task updated",
+          message: payload.is_archived
+            ? `${formData.title} was completed and moved to the archive.`
+            : dueDateText
             ? `${formData.title} is due ${dueDateText}.`
             : `${formData.title} was updated successfully.`,
           type: "task",
@@ -58,11 +65,13 @@ export default function Tasks({ onNotify, voiceTaskDraft, onVoiceTaskDraftHandle
       return result;
     }
 
-    const result = await createTask(formData);
+    const result = await createTask(payload);
     if (!result.error) {
       onNotify?.({
-        title: "New task created",
-        message: dueDateText
+        title: payload.is_archived ? "Task completed" : "New task created",
+        message: payload.is_archived
+          ? `${formData.title} was completed and moved to the archive.`
+          : dueDateText
           ? `${formData.title} is due ${dueDateText}.`
           : `${formData.title} was added to your list.`,
         type: "task",
@@ -84,14 +93,16 @@ export default function Tasks({ onNotify, voiceTaskDraft, onVoiceTaskDraftHandle
   };
 
   const handleToggle = async (id, currentStatus) => {
-    toggleComplete(id, currentStatus);
-    onNotify?.({
-      title: currentStatus === "done" ? "Task reopened" : "Task completed",
-      message: currentStatus === "done"
-        ? "A task was reopened."
-        : "A task was marked complete.",
-      type: "task",
-    });
+    const result = await toggleComplete(id, currentStatus);
+    if (!result.error) {
+      onNotify?.({
+        title: currentStatus === "done" ? "Task reopened" : "Task completed",
+        message: currentStatus === "done"
+          ? "A task was reopened."
+          : "A task was completed and moved to the archive.",
+        type: "task",
+      });
+    }
   };
 
   const handleArchive = async (id) => {
@@ -234,6 +245,7 @@ export default function Tasks({ onNotify, voiceTaskDraft, onVoiceTaskDraftHandle
           initialTask={draftTask}
           onSave={handleSave}
           onClose={handleClose}
+          onFindArchivedSuggestion={editingTask ? undefined : findArchivedTaskSuggestion}
         />
       )}
 

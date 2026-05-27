@@ -36,12 +36,20 @@ export default function Login({ onSwitchToRegister }) {
     setError("");
     setNotice("");
     setShowResendPopup(false);
-    const { error } = await signIn(email, password);
-    if (error) {
-      if (isEmailNotConfirmed(error.message)) {
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        if (isEmailNotConfirmed(error.message)) {
+          setShowResendPopup(true);
+        } else {
+          setError("Invalid email/username or password.");
+        }
+      }
+    } catch (loginError) {
+      if (isEmailNotConfirmed(loginError.message)) {
         setShowResendPopup(true);
       } else {
-        setError("Invalid email or password.");
+        setError("Invalid email/username or password.");
       }
     }
     setLoading(false);
