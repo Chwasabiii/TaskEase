@@ -69,7 +69,17 @@ function deepgramTranscriptionPlugin() {
             }
           )
 
-          const result = await response.json()
+          const responseText = await response.text()
+          let result = {}
+
+          if (responseText) {
+            try {
+              result = JSON.parse(responseText)
+            } catch {
+              result = { error: responseText }
+            }
+          }
+
           console.log('[Deepgram] Response:', JSON.stringify(result, null, 2))
 
           if (!response.ok) {

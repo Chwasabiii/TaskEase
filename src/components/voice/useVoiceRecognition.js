@@ -32,6 +32,18 @@ const getRecorderMimeType = () => {
   return options.find((type) => window.MediaRecorder?.isTypeSupported(type)) || "";
 };
 
+const readTranscriptionResponse = async (response) => {
+  const bodyText = await response.text();
+
+  if (!bodyText) return {};
+
+  try {
+    return JSON.parse(bodyText);
+  } catch {
+    return { error: bodyText };
+  }
+};
+
 export function useVoiceRecognition({ onResult }) {
   const streamRef = useRef(null);
   const recorderRef = useRef(null);
@@ -100,9 +112,7 @@ export function useVoiceRecognition({ onResult }) {
         body: formData,
       });
 
-      const payload = await response.json().catch(async () => ({
-        error: await response.text(),
-      }));
+      const payload = await readTranscriptionResponse(response);
 
       if (!response.ok) {
         throw new Error(payload?.error?.message || payload?.error || "Transcription failed.");
