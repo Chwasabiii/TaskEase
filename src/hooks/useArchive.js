@@ -51,26 +51,41 @@ export function useArchive() {
 
   // Restore task back to active
   const restoreTask = async (id) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { error } = await supabase
       .from("tasks")
       .update({ is_archived: false, updated_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
     if (!error) setArchivedTasks((prev) => prev.filter((t) => t.id !== id));
     return { error };
   };
 
   // Permanently delete
   const permanentDelete = async (id) => {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (!user) return { error: { message: "Authentication required." } };
+
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
     if (!error) setArchivedTasks((prev) => prev.filter((t) => t.id !== id));
     return { error };
   };
 
   // Permanently delete ALL archived tasks
   const clearAll = async () => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const ids = archivedTasks.map((t) => t.id);
     if (ids.length === 0) return;
-    const { error } = await supabase.from("tasks").delete().in("id", ids);
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .in("id", ids)
+      .eq("user_id", user.id);
     if (!error) setArchivedTasks([]);
     return { error };
   };

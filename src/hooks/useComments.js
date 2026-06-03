@@ -143,6 +143,7 @@ export function useComments(taskId) {
   }, [fetchComment, fetchComments, mergeComment, taskId]);
 
   const addComment = async (content) => {
+    if (!user) return { error: { message: "Authentication required." } };
     if (!content.trim()) return;
     setError("");
 
@@ -193,6 +194,7 @@ export function useComments(taskId) {
   };
 
   const deleteComment = async (commentId) => {
+    if (!user) return { error: { message: "Authentication required." } };
     setError("");
 
     const { error: rpcError } = await supabase.rpc("delete_task_comment", {

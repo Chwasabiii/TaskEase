@@ -19,7 +19,7 @@ export function useTaskFiles(taskId) {
   const [error, setError] = useState("");
 
   const fetchFiles = async () => {
-    if (!taskId) {
+    if (!taskId || !user) {
       setFiles([]);
       setLoading(false);
       return;
@@ -137,6 +137,8 @@ export function useTaskFiles(taskId) {
   };
 
   const createSignedUrl = async (filePath) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { data, error: signedUrlError } = await supabase.storage
       .from(BUCKET)
       .createSignedUrl(filePath, 60);
@@ -158,6 +160,8 @@ export function useTaskFiles(taskId) {
   };
 
   const downloadFile = async (file) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { data, error: downloadError } = await supabase.storage
       .from(BUCKET)
       .download(file.file_path);
@@ -180,6 +184,8 @@ export function useTaskFiles(taskId) {
   };
 
   const deleteFile = async (file) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { error: deleteError } = await supabase
       .from("task_files")
       .delete()

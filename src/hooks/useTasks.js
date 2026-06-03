@@ -58,6 +58,8 @@ export function useTasks() {
 
   // Create task
   const createTask = async (taskData) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { data, error } = await supabase
       .from("tasks")
       .insert([{ ...taskData, user_id: user.id }])
@@ -69,10 +71,13 @@ export function useTasks() {
 
   // Update task
   const updateTask = async (id, updates) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { data, error } = await supabase
       .from("tasks")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
+      .eq("user_id", user.id)
       .select("*, profiles(id, full_name, avatar_url)")
       .single();
     if (!error) {
@@ -87,7 +92,13 @@ export function useTasks() {
 
   // Delete task
   const deleteTask = async (id) => {
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (!user) return { error: { message: "Authentication required." } };
+
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
     if (!error) setTasks((prev) => prev.filter((t) => t.id !== id));
     return { error };
   };
@@ -103,10 +114,13 @@ export function useTasks() {
 
   // Archive task
   const archiveTask = async (id) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { error } = await supabase
       .from("tasks")
       .update({ is_archived: true, updated_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
     if (!error) setTasks((prev) => prev.filter((t) => t.id !== id));
     return { error };
   };

@@ -135,6 +135,7 @@ export function useChecklist(taskId) {
   }, [taskId]);
 
   const createItem = async (title) => {
+    if (!user) return { error: { message: "Authentication required." } };
     if (!title.trim()) return { error: { message: "Checklist item is required." } };
 
     const { data, error: createError } = await supabase
@@ -156,6 +157,8 @@ export function useChecklist(taskId) {
   };
 
   const updateItem = async (itemId, updates) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const { data, error: updateError } = await supabase
       .from("task_checklist_items")
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -176,6 +179,8 @@ export function useChecklist(taskId) {
   };
 
   const deleteItem = async (item) => {
+    if (!user) return { error: { message: "Authentication required." } };
+
     const filePaths = (item.files || []).map((file) => file.file_path);
     const { error: deleteError } = await supabase
       .from("task_checklist_items")
